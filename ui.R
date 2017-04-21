@@ -14,7 +14,7 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
            # ======================================================================================
            
            # --------------------------------------------------------------------------------------
-           # This main tab layout and style are adapted from Joe Cheng's famous 'superzip' example
+           # This main tab layout and style are inspired by Joe Cheng's famous 'superzip' example
            #              https://shiny.rstudio.com/gallery/superzip-example.html
            # --------------------------------------------------------------------------------------
            tabPanel("Interactive map",
@@ -46,7 +46,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                       # Due to specific contidionalPanel logic, checkboxGroupInput is not used here
                                       # ---------------------------------------------------------------------------
                                       
-                                      fluidRow(                                                                               # Air Quality
+                                      # Air Quality
+                                      fluidRow(
                                         column(5, checkboxInput("ck1", "Air Quality", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck1",
                                                          column(3,numericInput("w1", div(style='font-size: 12px;', "wt"),
@@ -58,7 +59,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                         ) # end of conditionalPanel
                                       ),  # end of fluidRow 1
                                       
-                                      fluidRow(                                                                               # Politics - VoteDiff
+                                      # Politics - VoteDiff
+                                      fluidRow(
                                         column(3, checkboxInput("ck2", "Politics", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck2",
                                                          column(2, radioButtons("radio2", label = NULL,
@@ -72,7 +74,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                         ) # end of conditionalPanel
                                       ),  # end of fluidRow 2
                                       
-                                      fluidRow(                                                                               # Income
+                                      # Income
+                                      fluidRow(
                                         column(5, checkboxInput("ck3", "Income", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck3",
                                                          column(3,numericInput("w3", div(style='font-size: 12px;', "wt"),
@@ -83,7 +86,7 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                         ) # end of conditionalPanel
                                       ),  # end of fluidRow 3
                                       
-                                      fluidRow(                                                                               # Living Cost
+                                      fluidRow(                                                                    # Living Cost
                                         column(5, checkboxInput("ck4", "Living Cost", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck4",
                                                          column(3,numericInput("w4", div(style='font-size: 12px;', "wt"),
@@ -94,7 +97,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                         ) # end of conditionalPanel
                                       ),  # end of fluidRow 4
                                       
-                                      fluidRow(                                                                               # Income/Cost
+                                      # Income/Cost
+                                      fluidRow(
                                         column(5, checkboxInput("ck5", "Income/Cost Ratio", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck5",
                                                          column(3,numericInput("w5", div(style='font-size: 12px;', "wt"),
@@ -105,7 +109,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                         ) # end of conditionalPanel
                                       ),  # end of fluidRow 5
                                       
-                                      fluidRow(                                                                               # Crime Rate
+                                      # Crime Rate
+                                      fluidRow(
                                         column(5, checkboxInput("ck6", "Crime Rate", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck6",
                                                          column(3,numericInput("w6", div(style='font-size: 12px;', "wt"),
@@ -116,7 +121,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                         ) # end of conditionalPanel
                                       ),  # end of fluidRow 6
                                       
-                                      fluidRow(                                                                               # Population Density
+                                      # Population Density
+                                      fluidRow(
                                         column(3, checkboxInput("ck7", "Population Density", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck7",
                                                          column(2, radioButtons("radio7", label = NULL,
@@ -139,7 +145,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                       # The next fluidRow is for mouse-click (lat,lng) input. This will not be used to filter data
                                       # -----------------------------------------------------------------------------------------------
                                       
-                                      fluidRow(                                                                               # mouse input for distance calc
+                                      # mouse input for distance calc
+                                      fluidRow(
                                         column(3, checkboxInput("ck100", "Distance to...", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck100",
                                                          column(2, radioButtons("radio100", label = NULL,
@@ -154,7 +161,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                       
                                       
                                       # action button -- user triggers a plot refresh when all changes are done,
-                                      #                  since backend calculation and map refresh take time (filtering > weighted average > plot)
+                                      #                  since backend calculation and map refresh take time 
+                                      #                  (filtering > weighted average > plot)
                                       actionButton("do", "Update Plots",icon("refresh"), width="100%")
                                       
                         ),  # end of absolutePanel "controls"
@@ -168,7 +176,7 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                       draggable = TRUE, top = 705, left = "auto", right = 1038, bottom = "auto",
                                       width = 500, height = "auto",
                                       
-                                      # chartJSRadarOutput("radar", height = "300")      # this is provided by the 'radarchart' package,
+                                      # chartJSRadarOutput("radar", height = "300")      # this is provided by 'radarchart' package,
                                       uiOutput("radar")                                  # but not as stable as uiOutput
                                       
                         ),  # end of absolutePanel for radar chart
@@ -280,7 +288,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                                           conditionalPanel("input.variablesStyle === 'Checkbox'",
                                                            sortableCheckboxGroupInput("variablesCheckbox", "", c("Loading..."))),
                                           conditionalPanel("input.variablesStyle === 'Selectize'",
-                                                           sortableSelectizeInput("variables", "", c("Loading..."), multiple = T, options = list(plugins = list("remove_button"))))),
+                                                           sortableSelectizeInput("variables", "", c("Loading..."), multiple = T,
+                                                                                  options = list(plugins = list("remove_button"))))),
                                    column(9, 
                                           plotOutput("corrPlot", height = 600),
                                           uiOutput("warning"))
