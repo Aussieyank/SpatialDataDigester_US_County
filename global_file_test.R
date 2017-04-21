@@ -15,15 +15,6 @@ library(radarchart)
 library(geosphere)
 library(RColorBrewer)
 library(PerformanceAnalytics)
-library(corrplot)
-library(htmltools)
-library(ggplot2)
-
-
-source("sortable.R", local = TRUE)
-source("corTest.R", local = TRUE)
-
-
 
 options(digits=4)
 

@@ -10,6 +10,12 @@ function(input, output, session) {
   # shared_mydf_ct <- SharedData$new(mydf_ct)
   # print(shared_mydf_ct$data)
   
+  # ======================================================================================
+  # =====================  Core computational piece for the map  =========================
+  # =====================                  ---                   =========================
+  # =====================  filtering and weighted average calc   =========================
+  # ======================================================================================
+  
   # ==================use normalized value here=====================
   weighted_val <- eventReactive(input$do, {
     
@@ -143,25 +149,24 @@ function(input, output, session) {
   }) # end of weighted_val
   # ===============================================================
   
+  # ======================================================================================
+  # ================                                                  ====================
+  # ================   Filtering and weighted average function ENDS   ====================
+  # ================                                                  ====================
+  # ======================================================================================
+  
   
   output$out <- renderPrint({
-    validate(need(input$map_shape_click, FALSE))
-    
+    validate(need(input$map_shape_click, FALSE))                                           # this renders current mouse-clicked lat lng to a text box
     str(input$map_shape_click)
   })
   
   
-  
-  
-  
   output$pie <- renderGvis({
-    gvisPieChart(weighted_val()$p, options=list(title ="Input Categories and Weights"))
+    gvisPieChart(weighted_val()$p, options=list(title ="Input Categories and Weights"))    # pie chart rendering
     # gvisPieChart(weighted_val()$p, options=list(width=400, height=450))
   })
   
-  
-  
-
   
   # Format popup data for leaflet map.
   popup_dat <- reactive({
@@ -170,7 +175,7 @@ function(input, output, session) {
            "<br><strong>Score 0-10: </strong>",
            weighted_val()$v,
            "<br><strong>Air Quality: </strong>",
-           leafmap$airqlty,
+           leafmap$airqlty,                                                                # leaflet popup info preparation
            "<br><strong>VoteDiff: </strong>",
            leafmap$perdiff,
            "<br><strong>Income ($/yr): </strong>",
@@ -187,19 +192,6 @@ function(input, output, session) {
   }) # end of popup_dat
 
   
-
-  
-
-  
-  # popup_weight <- eventReactive(popup_dat(), {
-  #   isolate(
-  #     list(weighted_val = weighted_val(),
-  #          popup_dat = popup_dat())
-  #   )
-  # 
-  # }) # end of eventReactive
-  
-
   output$map <- renderLeaflet({
     # data <- popup_weight()
     leaflet() %>% 
@@ -212,7 +204,6 @@ function(input, output, session) {
   
 
   observeEvent(input$do,{
-    
     
     # data <- popup_weight()
     proxy <- leafletProxy("map")
@@ -270,62 +261,34 @@ function(input, output, session) {
     # observeEvent(input$map_shape_click,{                   # this works
     
     # print(map_click_info)
-    lat0 = input$map_shape_click$lat
-    lon0 = input$map_shape_click$lng
     
-    print(lon0)
-    print(lat0)
-    
-    xy = rbind(c(lon0, lat0))
-    xy
-    
-    
-    # distance_vec = gcd.slc(lon0, lat0, dummy$lon, dummy$lat) 
-    # ======================== make a checkbox for mouse lat lon input === make lat lon a text output to panel ====
-    # dist_vec = distm (lon_lat_county_mat, xy, fun = distHaversine)
+    # lat0 = input$map_shape_click$lat
+    # lon0 = input$map_shape_click$lng
     # 
-    # 
-    # print(head(dist_vec))
-    # 
-    # proxy <- leafletProxy("map")
-    # proxy %>%
-    #   clearShapes() %>%
-    #   addPolygons(data=leafmap,
-    #               fillColor = pal(dist_vec),
-    #               fillOpacity = 0.8,
-    #               color = "#BDBDC3",
-    #               weight = 1,
-    #               popup = popup_dat())%>%
-    #   addLegend("bottomleft", pal=pal, values=as.vector(dist_vec), title="color by title",
-    #             layerId="colorLegend")
-    # ==============================================================================================================
+    # print(lon0)
+    # print(lat0)
     
-    
+    xy = rbind(c(input$map_shape_click$lng, input$map_shape_click$lat))
+
   }
   
  
  
  
  output$click_lat_lon = renderPrint({
-   
-   # map_click_info <- input$map_shape_click
-   # # print(map_click_info)
-   # lat0 = map_click_info$lat
-   # lon0 = map_click_info$lng
-   
    if (!is.null(input$map_shape_click)) {
-     cat(input$map_shape_click$lat, input$map_shape_click$lng)
+     cat(input$map_shape_click$lat, input$map_shape_click$lng)                           # observe mouse click, render lat lng as text
    }
  })
  
  
- observe({
+ observe({                                                                                # observe mouse click, and put a marker on map
    s = input$map_shape_click
    if(input$ck100 & (!is.null(s))) {
      myUrl = 'http://www.clker.com/cliparts/5/4/e/f/133831998776815806Red%20Heart.svg'    # heart
      if (input$radio100 == 2) myUrl = 'http://cdn.mysitemyway.com/etc-mysitemyway/icons/legacy-previews/icons-256/blue-jelly-icons-culture/024890-blue-jelly-icon-culture-heart-broken1-sc44.png'
      
-     proxy <- leafletProxy("map",data=leafmap)
+     proxy <- leafletProxy("map",data=leafmap)                                            
      proxy %>%
        clearMarkers() %>%
        addMarkers(lng = s$lng, lat = s$lat,
@@ -349,7 +312,7 @@ function(input, output, session) {
     # flip values following user's input
     radio_chk = c(input$radio2 == 2, input$radio7 == 2)
     cols_flip = c(2,7)[radio_chk]
-    if (length(cols_flip)!=0) mydf[,cols_flip] = scalar - mydf[,cols_flip]
+    if (length(cols_flip)!=0) mydf[,cols_flip] = scalar - mydf[,cols_flip]                  # render radar chart
 
     radardf = mydf
     radardf$score = weighted_val()$v
@@ -398,13 +361,133 @@ function(input, output, session) {
   }) # end of renderChartJSRadar
 
   output$leafmaptable = DT::renderDataTable({
-    
-    # as.data.frame(leafmap)
-    as.data.frame(leafmap)[weighted_val()$i,]
-    
-    # dfdf <- shared_mydf_ct$data()
-
-
+    as.data.frame(leafmap)[weighted_val()$i,]                                             # render FILTERED data table for tab 2 -- sliders on tab 1 DO INTERACT with tab 3 data
   })
+  
+  # output$corr <- renderUI({
+  #   
+  # })
+  
+  
+  
+  
+  # ======================================================================================
+  # ====================          Map related logic ENDS         =========================
+  # ====================                                         =========================
+  # ====================          Corr Plot Logic STARTS         =========================
+  # ======================================================================================
+  
+  
+  
+  
+  dataset <- reactive({
+    dummy
+  })
+  
+  numericColumns <- reactive({
+    df <- dataset()
+    colnames(df)[sapply(df, is.numeric)]                                                  # get col names
+  })
+  
+  correlation <- reactive({
+    data <- dataset()
+    variables <- input$variables
+    if(is.null(data) || !length(intersect(variables, colnames(data)))) {
+      NULL
+    } else {
+      cor(dataset()[,input$variables], use = input$corUse, method = input$corMethod)      # computational core -- corr calc
+    }
+  })
+  
+  sigConfMat <- reactive({
+    val <- correlation()
+    if(!is.null(val))
+      corTest(val, input$confLevel)                                                        # calling correlation function, send to corTest then calc for p-value and CI
+  })
+  
+  ## Data and Correlation Validation and UI Updates ##########
+  
+  #Update hclust rect max
+  observe({
+    val <- correlation()
+    if(!is.null(val))
+      updateNumericInput(session, "plotHclustAddrect", max = nrow(val))
+  })
+  
+  #Update variable selection
+  observe({
+    updateCheckboxGroupInput(session, "variablesCheckbox", choices = numericColumns(), selected = numericColumns())
+    
+    updateSelectInput(session, "variables", choices = numericColumns(), selected = numericColumns())
+  })
+  
+  #Link Variable Selection
+  observe({
+    if(input$variablesStyle == "Checkbox") {
+      updateCheckboxGroupInput(session, "variablesCheckbox", selected = isolate(input$vairables))
+    }
+  })
+  observe({
+    updateSelectInput(session, "variables", selected = input$variablesCheckbox)
+  })
+  
+  output$warning <- renderUI({
+    val <- correlation()
+    if(is.null(val)) {
+      tags$i("Waiting for data input...")
+    } else {
+      isNA <- is.na(val)
+      if(sum(isNA)) {
+        tags$div(
+          tags$h4("Warning: The following pairs in calculated correlation have been converted to zero because they produced NAs!"),
+          helpText("Consider using an approriate NA Action to exclude missing data"),
+          renderTable(expand.grid(attr(val, "dimnames"))[isNA,]))
+      }
+    }
+  })
+  
+  ## Correlation Plot ####################################
+  
+  output$corrPlot <- renderPlot({
+    val <- correlation()
+    if(is.null(val)) return(NULL)
+    
+    val[is.na(val)] <- 0
+    args <- list(val,
+                 order = if(input$plotOrder == "manual") "original" else input$plotOrder, 
+                 hclust.method = input$plotHclustMethod, 
+                 addrect = input$plotHclustAddrect,
+                 
+                 p.mat = sigConfMat()[[1]],
+                 sig.level = if(input$sigTest) input$sigLevel else NULL,
+                 insig = if(input$sigTest) input$sigAction else NULL,
+                 
+                 lowCI.mat = sigConfMat()[[2]],
+                 uppCI.mat = sigConfMat()[[3]],
+                 plotCI = if(input$showConf) input$confPlot else "n")
+    
+    if(input$showConf) {
+      do.call(corrplot, c(list(type = input$plotType), args))
+    } else if(input$plotMethod == "mixed") {
+      do.call(corrplot.mixed, c(list(lower = input$plotLower,
+                                     upper = input$plotUpper),
+                                args))
+    } else {
+      do.call(corrplot, c(list(method = input$plotMethod, type = input$plotType), args))
+    }
+  }) # end of renderPlot to output$corrPlot
+  
+  
+  
+  
+  # ======================================================================================
+  # ====================                                         =========================
+  # ====================          Corr Plot Logic Ends           =========================
+  # ====================                                         =========================
+  # ======================================================================================
+  
+  
+  
+  
   
 }
