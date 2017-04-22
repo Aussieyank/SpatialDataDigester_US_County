@@ -38,8 +38,8 @@ h1, h2, h3, h4 { font-weight: 400; }  /* 400 */
 /* Position and style citation */
 #cite {
   position: absolute;
-  bottom: 10px;
-  left: 10px;
+  bottom: 20px;
+  right: 10px;
   font-size: 12px;
 }
 

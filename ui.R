@@ -3,7 +3,8 @@
 # Chao Shi
 # chao.shi.datasci@gmail.com
 
-navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County v0.8"),
+navbarPage(div(style='font-size: 30px;', "Geospatial Data Digester -- US County v0.8"),
+           windowTitle = "Olivia loves colorful maps",
            id="nav",
            collapsible = TRUE, # small-screen friendly menu bar (good for mobile devices)
            
@@ -34,8 +35,7 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                         # ============================================== #
                         
                         leafletOutput("map", width="100%", height="100%"),
-                        verbatimTextOutput("out"),
-                        
+
                         # =========================================================== #
                         #    floating control panel hosting most of the user input    #
                         # =========================================================== #
@@ -201,7 +201,7 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                         
                         
                         tags$div(id="cite",
-                                 'Chao Shi', tags$em('Geospatial Data Digester Prototype'), '04/2017'
+                                 'Geospatial Data Digester Prototype --- ', tags$em('Chao Shi'), '04/2017'
                         )
                         
                     ) # end of div

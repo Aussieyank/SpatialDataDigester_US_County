@@ -4,6 +4,28 @@
 # chao.shi.datasci@gmail.com
 
 # ======= wishlist - brain dump ========
+
+   # done #  !! a non-quantile color pallete is needed when plotting lving cost and Inc/Cost data alone (when filtering towards the high cost end)
+                  # --> when the amount of data is very limited, breaking into quantiles doesn't make sense either
+                  # --> maybe add a data size check, if smaller than a threshold, switch away from quantile color scale
+
+   # done # !! population is not normalized correctly (range overflow)  -> new york is a good place to check if this is fixed on population
+                # --> added a round(,2) step in global.R, to limit numeric values to num_decimal = 2
+
+   # done #    window title / tab title when oened in a browser
+
+#  create popup on markers, turn on mouse hover for markers
+
+   # done #  add score to a column in tab 2 (data table, so users can sort wrt score, then drop markers)
+
+#  click on a county on the map, radar chart should show info about this county too
+
+#  color bar, red on top, edit text
+
+#  check words on the sliders, units
+
+#  in global.R move key constants to the beginning
+
 # > ?reactiveFileReader
 # > ?reactivePoll
 # > ?reactiveFileReader
@@ -193,7 +215,7 @@ function(input, output, session) {
     paste0("<strong>County: </strong>",
            leafmap$county_state,
            "<br><strong>Score 0-10: </strong>",
-           weighted_val()$v,
+           round(weighted_val()$v,0),
            "<br><strong>Air Quality: </strong>",
            leafmap$airqlty,                                                                # leaflet popup info preparation
            "<br><strong>VoteDiff: </strong>",
@@ -270,7 +292,7 @@ function(input, output, session) {
                                                                                                #### <- additional special color palletes
     # ----------------------------------------------------------------------------------------------------------------------------------
     
-    isolate({
+    # isolate({
       
       # polygon update module
       proxy %>%
@@ -284,7 +306,7 @@ function(input, output, session) {
         addLegend("bottomleft", pal=pal, values=color_val, title="color by title",
                   layerId="colorLegend")
       
-    }) # end of isolate
+    # }) # end of isolate
 
   }) # end of observe
   
@@ -424,8 +446,10 @@ function(input, output, session) {
  
  output$leafmaptable = DT::renderDataTable({
    
-   as.data.frame(leafmap)[weighted_val()$i,]    # render FILTERED data table for tab 2 -- 
-                                                # sliders on tab 1 DO INTERACT with tab 3 data
+   # render FILTERED data table for tab 2, with dynamically calculated SCORE ADDED 
+   #   -- calculated score is attached, so user can sort by the dynamic score
+   cbind("score" = round(weighted_val()$v[weighted_val()$i],0), as.data.frame(leafmap)[weighted_val()$i,])
+
  })
 
  

@@ -1,3 +1,6 @@
+# credit goes to saurfang
+# https://github.com/saurfang/shinyCorrplot
+
 #My custom checkboxGroupInput such that I don't need to temper with Shiny namespace
 sortableCheckboxGroupInput <- function(inputId, ...) {
   # build jquery-ui dependency for sortable

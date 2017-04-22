@@ -23,7 +23,7 @@ library(ggplot2)
 source("sortable.R", local = TRUE)
 source("corTest.R", local = TRUE)
 
-
+scalar = 100
 
 options(digits=4)
 
@@ -260,9 +260,16 @@ county_dat <- full_join(county_dat, zillowdat, by=c("GEOID"))
 # this is done by  normed =  ( original_col - min_of_this_col ) / original_range_of_this_col
 
 
-scalar = 10
+
 # ====================== this can be made into a function ==================
 nums <- sapply(county_dat, is.numeric)
+
+
+# ============ round ============== #
+# testing if this is needed for slider range comparison to work for extreme cases
+county_dat[,nums] = round(county_dat[,nums],2)
+
+
 to_be_normalized = county_dat[,nums]
 normalized = as.data.frame(lapply(to_be_normalized, normalize, na.rm=TRUE))
 
