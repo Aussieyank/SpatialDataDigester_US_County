@@ -1,103 +1,115 @@
-# ==========================
+# Geospatial Data Digester UI Prototype
+#
+# Chao Shi
+# chao.shi.datasci@gmail.com
+
+# ======= wishlist - brain dump ========
 # > ?reactiveFileReader
 # > ?reactivePoll
 # > ?reactiveFileReader
-# ==========================
+# ======================================
 
 function(input, output, session) {
-  
-  
-  # shared_mydf_ct <- SharedData$new(mydf_ct)
-  # print(shared_mydf_ct$data)
-  
+
   # ======================================================================================
   # =====================  Core computational piece for the map  =========================
   # =====================                  ---                   =========================
   # =====================  filtering and weighted average calc   =========================
   # ======================================================================================
   
-  # ==================use normalized value here=====================
   weighted_val <- eventReactive(input$do, {
     
-    # =====================
-    # 1) observe check boxes (for debug)
+    #  ------------------------- data treatment BEFORE calling this function ----------------------
+    #
+    # a) each column is normalized to a [0,scalar] range, which 'scalar' is defined in global.R
+    #         -- this is needed for a weighted-average score generation
+    # b) the column are pre-treated so that the larger number direction is aligned with what people normally want
+    #         -- for example: air quality measurement PM 2.5 is normalized so that a SMALL number gets a HIGH score,
+    #                         while for income, LARGE number gets a HIGH score
+    #    HOWEVER, addtional user input is needed for data categories like politics, user need to choose preferred side
+    # c) nan or null are fixed, so the weighted average would make sense
     
-    # if(input$ck1) print("box 1 checked") else print("box 1 NOT checked")
-    # if(input$ck2) print("box 2 checked") else print("box 2 NOT checked")
-    # if(input$ck3) print("box 3 checked") else print("box 3 NOT checked")
-    # box_vec = c(input$ck1, input$ck2, input$ck3, input$ck4, input$ck5, input$ck6, input$ck7)                                                                       ######
-    box_vec = c(input$ck1, input$ck2, input$ck3, input$ck4, input$ck5, input$ck6, input$ck7,                    input$ck100)                                                                       ######
-    i_dyn   = 8
+    # ------------------------------------------ work flow ----------------------------------------
+    # 1) check which categories are checked by user  (input$ck)
+    # 2) check the 'positive' direction definition by user, and modify data ((scalar - x) if needed)
+    # 3) get ranges for each category as row filters
+    # 4) get (lat,lng) from mouse click (to overwrite a default value), 
+    #    calculate for all counties the distance towards this (lat,lng) location
+    # 5) row filtering based on the slider inputs (distance from step 4 is NOT used by design)
+    # 6) weighted average calculation
+    # 7) return a list
+    # ----------------------------------------------------------------------------------------------
     
     
-    # flip values following user's input
-    radio_chk = c(input$radio2 == 2, input$radio7 == 2)
+    ## 1) which boxes are checked --> column filter
+    box_vec = c(input$ck1, input$ck2, input$ck3, input$ck4, input$ck5, input$ck6, input$ck7,  #### <- additional filter input, b4 mouse input ck100
+                input$ck100)
+    colskeep = which(box_vec)  # each county in the data frame is a row, while different data categories are columns
+                               # user input from the checkboxes are used as column filter, hence 'colskeep'
+    
+    i_dyn   = 8                                                                               #### <- this needs to change will additional checkbox
+                                                                                              ####    it stores the location of ck100 in box_vec
+                                                                                              ####    distance value calculated based on user mouse
+                                                                                              ####    click will not be used as a filter, by design
+    ## 2) flip values following user's input
+    radio_chk = c(input$radio2 == 2, input$radio7 == 2)  # need manual change if the order of fluidRow items are changed in ui.R
     cols_flip = c(2,7)[radio_chk]
     
     if (length(cols_flip)!=0) mydf[,cols_flip] = scalar - mydf[,cols_flip]
-    
-    # print(summary(box_vec))   
-    # print(str(box_vec))
-    # print(class(box_vec))
-    
-    
-    # 2) form a vector "colskeep" with checked boxes if 1 and 3 are checked, return c(1,3), if none return NULL
-    
-    # print(which(box_vec))
-    
-    colskeep = which(box_vec)
-    # print(c(as.numeric(input$w1),as.numeric(input$w2),as.numeric(input$w3)))
-    # print(c(as.numeric(input$w1),as.numeric(input$w2),as.numeric(input$w3))[colskeep])
-    # print(length(colskeep))
-    # print(n(colskeep))
-    
+
+    # get weights for the weighted average step later
     wtskeep = c(as.numeric(input$w1),as.numeric(input$w2),as.numeric(input$w3),
                 as.numeric(input$w4),as.numeric(input$w5),as.numeric(input$w6),
-                # as.numeric(input$w7))[colskeep]                                                                                                                     #####
-                as.numeric(input$w7),                                                                          as.numeric(input$w100))[colskeep]                                                                                                                     #####
-    # wtskeep = as.numeric(box_vec)[colskeep]
+                as.numeric(input$w7),                                                         #### <- additional input here, BEFORE w100 mouse data
+                as.numeric(input$w100))[colskeep]
 
-    # 3) wts = matrix(c(as.numeric(input$w1),as.numeric(input$w2),as.numeric(input$w3)),  3,1)  # checkbox input will filter out things
+    # reshape it as a matrix with only 1 column, this is for the vectorized weighted average
     wts = matrix(wtskeep, length(colskeep),1)
     
-    # cat('wts', wts, '\n')
-    
-    # 4) then get the ranges from all sliders
-    
-    # print(rbind(input$sl1,input$sl2,input$sl3))
-    
-    ranges = rbind(input$sl1,input$sl2,input$sl3,input$sl4,input$sl5,input$sl6,input$sl7)   # each row contains the range for the corresponding variable           #####
+    ## 3) get the ranges from all sliders
+    ranges = rbind(input$sl1,input$sl2,input$sl3,input$sl4,input$sl5,input$sl6,input$sl7)     ##### <- need to change with additional input fluidRow
 
-    # ======================================================================
-    # add distance calculation result to mydf as a column
-    latlonclk = rbind(c(-90, 40)) # default if no clk
+    # ----------------------------------------------------------------------------------------------------------------- #
+    # all other data are loaded from global.R, in a way static (values might be filtered out, but they do not change)   #
+    # but this mouse-click based distance calculation would require frequent update, hence dynamic (value will change)  #
+    #                                                                                                                   #
+    # the desire to add this dynamic data generation has made the logic and algorithm in server.R more complicated --   #
+    #                                                                                                                   #
+    #       >> I DO NOT want the distance data to enter the row filtering process                                       #
+    #           -- easily done by human eyes on a map, value added for user is low                                      #
+    #           -- lots of other things need to be calculated also to update UI, added value might not worth the effort #
+    #           -- this is a 2-wk project, many other 'low-hanging-fruit' features need to be developed                 #
+    #                                                                                                                   #
+    #       >> I DO want the distance data to enter the weighted average scoring process.                               #
+    #                                                                                                                   #
+    # the solution I prototyped here may be far from ideal.                                                             #
+    #                                                                                                                   #
+    # one motivation behind this project is to develop something general enough to keep reusing                         #
+    # your thoughts on improving this data digestion engine, especially the computational part are hightly appreciated. #
+    # ----------------------------------------------------------------------------------------------------------------- #
+    
+    ## 4) get (lat,lng) input from mouse click
+    latlonclk = rbind(c(-91.5, 35))  # default if no mouse click yet
     latlonclk = clicklatlon()
     
+    dist_vec   = NULL
+    radar_vars = c(names(dummy2), 'distance')
     
-    cat('I am in weighted_val(), reading xy() value', latlonclk)
-    print(dim(latlonclk))
+    if(input$ck100) {
+      
+      dist_vec = distm (lon_lat_county_mat, latlonclk, 
+                        fun = distHaversine)    # from 'geosphere' package
+      
+      dist_vec = normalize(dist_vec) * scalar   # normalize to [0,scalar],    scalar is defined in global.R
+                                                # normalization for other 'static' data is done in global.R
+                                                # (or a separate file, as the version shared with public might hide the data cleaning steps)
+      if (input$radio100 == 1) dist_vec = scalar - dist_vec     # check user input, this needs to be changed accordingly.
+                                                                # as user might choose to either stay 'close to' or 'away from' the location
+    }
 
     
-    # distance_vec = gcd.slc(lon0, lat0, dummy$lon, dummy$lat) 
-    # ======================== make a checkbox for mouse lat lon input === make lat lon a text output to panel ====
-    dist_vec = NULL
-    radar_vars = c(names(dummy2), 'distance')
-    if(input$ck100) {
-      dist_vec = distm (lon_lat_county_mat, latlonclk, fun = distHaversine)
-      dist_vec = normalize(dist_vec) * scalar       # normalize to [0,scalar],    scalar is saved in global.R
-      if (input$radio100 == 1) dist_vec = scalar - dist_vec                  # check user input, this needs to be changed accordingly.
-    }
-    # print(head(dist_vec))
-    # 
-    # mydf_w_dist     = cbind(mydf,dist_vec)
-    # print(names(mydf_w_dist))
-    # 
-    
-    
-    
-    # ======================================================================
-    
-    
+    ## 5) row filtering
+
     # get 2 vectors of row numbers:   rowskeep,   rowsout
     # filtered mydf will be a n(rowskeep)-by-n(colskeep) matrix, 
     
@@ -105,7 +117,14 @@ function(input, output, session) {
     i=1
     keeper = rep(TRUE, nrow(dummy2))
     totchk = length(colskeep)
-    print(totchk)
+    
+    # ---------------------------------------------------------- special note ----------------------------------------------------------
+    # the logic here is to make sure the row filtering is successful in all these situations
+    # a) multiple 'static' data chosen, distance data NOT chosen (this is the usual case before adding the dynamic distance calculation)
+    # b) multiple 'static' data AND the dynamic distance are chosen --> the distance value does not filter things
+    # c) NO 'static' data is chosen, but dynamic distance calc IS chosen --> totchk == 1, but no filtering
+    # d) nothing is chosen at all, no row filtering
+
     while(totchk) {
       if (colskeep[i] != i_dyn) {
         keeper = keeper & (dummy2[,colskeep[i]]>=ranges[colskeep[i],1] & dummy2[,colskeep[i]]<=ranges[colskeep[i],2])
@@ -113,41 +132,32 @@ function(input, output, session) {
       i = i+1
       if(i>totchk) break
     }
+    # ----------------------------------------------------------------------------------------------------------------------------------
     
-    # print(which(keeper))
-    # print(sum(keeper))
     rowskeep = which(keeper)
-    rowsout  = which(!keeper)
-    
-    # weighted_val = df %*% weight
+    #rowsout  = which(!keeper)
 
-    # as.matrix(mydf) %*% wts / sum(wts)  # this is the weighted sum, WITHOUT filtering
-    # as.matrix(mydf[,colskeep]) %*% wts / sum(wts)  # this is the weighted sum, with col filtering
+    ## 6) weighted average calculation -- getting the score for each county
     
-    # mydf_rowskeep = mydf[rowskeep,]
+    # as.matrix(mydf) %*% wts / sum(wts)             # first version of weighted sum, WITHOUT filtering
+    # as.matrix(mydf[,colskeep]) %*% wts / sum(wts)  # now with column filtering
     
     weighted_score =  rep(NaN, nrow(dummy2))
-    # weighted_score[rowskeep] =     as.matrix(mydf[rowskeep,][,colskeep]) %*% wts / sum(wts)  # this is the weighted sum, with col and row filtering
-    weighted_score[rowskeep] =     cbind(as.matrix(mydf[rowskeep,]),dist_vec[rowskeep,])[,colskeep] %*% wts / sum(wts)  # this is the weighted sum, with col and row filtering
     
-
-    # print(names(dummy2)[box_vec])
-    # print(wts)
-    PieInput = data.frame("Parameters" = radar_vars[box_vec],
-               "Weights" = wts)
-    # print(PieInput)
+    # weighted sum, with col and row filtering, AND dist_vec attached (when dist_vec is empty this still works)
+    weighted_score[rowskeep] =cbind(as.matrix(mydf[rowskeep,]),dist_vec[rowskeep,])[,colskeep] %*% wts / sum(wts)  
+    # weighted_score[rowskeep] = as.matrix(mydf[rowskeep,][,colskeep]) %*% wts / sum(wts)  # weighted sum, with both col and row filtering
+                                                                                           # BEFORE introducing the dynamic distance calc
     
+    # generate data for the pie chart -- names of inputs considered in the score calc, and their weights
+    PieInput = data.frame("Parameters" = radar_vars[box_vec], "Weights" = wts)
     
+    ## 7) return
     list(v = weighted_score,i = rowskeep, p = PieInput)
-    
-    # The output needs to have the same number of rows 
-    #weighted_val(rowskeep) = 
-    #weighted_val(rowsout)  = NA
-    
-    # =====================
+
 
   }) # end of weighted_val
-  # ===============================================================
+
   
   # ======================================================================================
   # ================                                                  ====================
@@ -156,17 +166,24 @@ function(input, output, session) {
   # ======================================================================================
   
   
+  # renders current mouse-clicked lat lng to a text box
   output$out <- renderPrint({
-    validate(need(input$map_shape_click, FALSE))                                           # this renders current mouse-clicked lat lng to a text box
+    validate(need(input$map_shape_click, FALSE))                                           
     str(input$map_shape_click)
   })
   
+  # ======================= #
+  #    floating pie chart   #    for user to understand the chosen inputs and weights 
+  # ======================= #
   
   output$pie <- renderGvis({
-    gvisPieChart(weighted_val()$p, options=list(title ="Input Categories and Weights"))    # pie chart rendering
+    gvisPieChart(weighted_val()$p, options=list(title ="Input Categories and Weights"))
     # gvisPieChart(weighted_val()$p, options=list(width=400, height=450))
   })
   
+  # ============================================== #
+  #              THE MAP -- popup prep             #
+  # ============================================== #
   
   # Format popup data for leaflet map.
   popup_dat <- reactive({
@@ -192,36 +209,67 @@ function(input, output, session) {
   }) # end of popup_dat
 
   
+  # ============================================== #
+  #           THE MAP -- initialization            #
+  # ============================================== #
+  
   output$map <- renderLeaflet({
     # data <- popup_weight()
     leaflet() %>% 
       # addProviderTiles("Thunderforest.Transport") %>%      #Thunderforest.Transport   Stamen.TonerLite
       addTiles(urlTemplate = "//{s}.tiles.mapbox.com/v3/jcheng.map-5ebohr46/{z}/{x}/{y}.png") %>%
+      addPolygons(data=leafmap,                              # we addPolygons during the initialization for 2 reasons
+                  fillColor = 'transparent',                 #     1) county boundaries
+                  fillOpacity = 0.8,                         #     2) we use '_shape_click' for mouse click detection, we need a 'shape' layer
+                  color = "#BDBDC3",
+                  weight = 1) %>% 
       setView(lng = -91.5, lat = 35, zoom = 5)
     # proxy <- leafletProxy("map", data = leafmap)
     # print(str(proxy))
   }) # end of renderLeaflet
   
+  
+  # =========================================================== #
+  #  THE MAP -- polygon refresh after each action button click  #           #
+  # =========================================================== #
 
   observeEvent(input$do,{
     
-    # data <- popup_weight()
     proxy <- leafletProxy("map")
-    # print(class(proxy))
-    
     
     # pal <- colorQuantile("YlOrRd", NULL, n = 20)
     pal <- colorQuantile("Spectral", NULL, n = 20, reverse = TRUE,na.color = "transparent")
     # pal <- colorBin("Spectral", c(0,10), bins = 11, pretty = TRUE, na.color = "transparent", alpha = FALSE, reverse = TRUE)
     # pal <- colorBin("RdBu", c(-10,10), bins = 11, pretty = TRUE, na.color = "#808080", alpha = FALSE, reverse = FALSE)
+    
+    # ------------------------------------------------------------ special note -------------------------------------------------------
+    # About the color bar
+    #
+    # When user select more than 1 input categories (check more than 1 boxes), the color is a weighted average based on normalized data
+    # where the data itself loses units and specific physical meaning, in which case a general quantile color pallete is selected
+    #
+    # HOWEVER -- 
+    #
+    # When user only seclets 1 input category, this might be the time to plot the original data (pre-norm), so it could be digested with
+    # the proper units. If this is the case, the color bar might need to be specifically adjusted, for example:
+    #
+    # Traditionally, when polotting political data from the US, blue represents the Democratic Party (DEM), and red the Republic (GOP),
+    # when plotting the voting difference (%dem - gop%), one might want to set white to 0, and blue to >0, red to <0
+    #
+    # This is purely based on user experience consideration.
+    # ----------------------------------------------------------------------------------------------------------------------------------
+    
     if (input$ck2 == TRUE & !any(input$ck1,input$ck3,input$ck4,input$ck5,input$ck6,input$ck7,input$ck100)) {
       color_val = dummy2[,2]
       pal <- colorBin("RdBu", c(-1,1), bins = 11, na.color = "transparent", alpha = FALSE, reverse = FALSE)
     } else color_val = as.vector(weighted_val()$v)
     
+                                                                                               #### <- additional special color palletes
+    # ----------------------------------------------------------------------------------------------------------------------------------
+    
     isolate({
       
-      # print((data$weighted_val))
+      # polygon update module
       proxy %>%
         clearShapes() %>%
         addPolygons(data=leafmap,
@@ -237,57 +285,54 @@ function(input, output, session) {
 
   }) # end of observe
   
+  # ======================================== #
+  #     interaction with tab 2 data table    #
+  # =========================================#
   
+  # drop a marker for the counties highlighted in tab 2 data table
   observe({
-    s = input$leafmaptable_rows_selected
+    
+    s = input$leafmaptable_rows_selected   # '_rows_selected' is the leaflet syntax observing mouse click on data tables
     
     markers = as.data.frame(leafmap)[weighted_val()$i,][s,c("lat","lon")]
-    # print(markers)
+
     proxy <- leafletProxy("map")
     proxy %>% 
       clearMarkers() %>% 
       addMarkers(data=leafmap,lng = markers[,2], lat =markers[,1])
-      
-    
-    
-    
     
   })
   
-  clicklatlon <- function () {                          # this works
+  
+  # getting lat lon from mouse click
+  clicklatlon <- function () {                                     # this is a good place to understand Shiny reactive mechanism
     # clicklonlat <-- eventReactive(input$map_shape_click,{        # this doe NOT work
     # clicklonlat <-- reactive({                                   # this doe NOT work
-    # observe({                                               # this works
-    # observeEvent(input$map_shape_click,{                   # this works
-    
-    # print(map_click_info)
-    
-    # lat0 = input$map_shape_click$lat
-    # lon0 = input$map_shape_click$lng
-    # 
-    # print(lon0)
-    # print(lat0)
+    # observe({                                                    # this works
+    # observeEvent(input$map_shape_click,{                         # this works
     
     xy = rbind(c(input$map_shape_click$lng, input$map_shape_click$lat))
-
+    
   }
   
+  
+  # reder text for the (lat,lng) from mouse click to UI
+  output$click_lat_lon = renderPrint({
+    if (!is.null(input$map_shape_click)) {
+      cat(input$map_shape_click$lat, input$map_shape_click$lng)                           # observe mouse click, render lat lng as text
+    }
+  })
  
- 
- 
- output$click_lat_lon = renderPrint({
-   if (!is.null(input$map_shape_click)) {
-     cat(input$map_shape_click$lat, input$map_shape_click$lng)                           # observe mouse click, render lat lng as text
-   }
- })
- 
- 
+ # drop marker if the dynamic distance box is checked
  observe({                                                                                # observe mouse click, and put a marker on map
    s = input$map_shape_click
-   if(input$ck100 & (!is.null(s))) {
-     myUrl = 'http://www.clker.com/cliparts/5/4/e/f/133831998776815806Red%20Heart.svg'    # heart
-     if (input$radio100 == 2) myUrl = 'http://cdn.mysitemyway.com/etc-mysitemyway/icons/legacy-previews/icons-256/blue-jelly-icons-culture/024890-blue-jelly-icon-culture-heart-broken1-sc44.png'
+   if(input$ck100 & (!is.null(s))) {     # stay close to  --> red heart icon
+     myUrl = 'http://www.clker.com/cliparts/5/4/e/f/133831998776815806Red%20Heart.svg'    
+     if (input$radio100 == 2) {          # stay away from --> blue broken heart...
+       myUrl = 'http://cdn.mysitemyway.com/etc-mysitemyway/icons/legacy-previews/icons-256/blue-jelly-icons-culture/024890-blue-jelly-icon-culture-heart-broken1-sc44.png'
+       } 
      
+     # drop marker
      proxy <- leafletProxy("map",data=leafmap)                                            
      proxy %>%
        clearMarkers() %>%
@@ -296,198 +341,209 @@ function(input, output, session) {
                                iconWidth = 30, iconHeight = 30)
                   )
    }
+   
+ })
+ 
+ 
+ # ========================= #
+ #    floating radar chart   #     a quick visual strength / weakness multi-variable plot
+ # ========================= #
+ 
+ # output$radar <- renderChartJSRadar({                # this is supposed to work, but not stable from my experience
+ output$radar <- renderUI({
+   
+   # ------------------------------------------------- thoughts about the radar chart --------------------------------------------
+   # The idea for the radar chart to understand the strengh and weakness for the chosen places.
+   # We will plot many measurements for the chosen location, EVEN IF the user decides not to include certain input data, 
+   # by leaving some boxes in the control panel unchecked.
+   #
+   # The logic is to still look at the full strenth/weakness, in case certain neglected aspect(s) would trigger a second thought
+   #
+   # The 25%, 50%, 75% quantile are also plotted, so there is a visual reminder of what the benchmark crowd might look like
+   #
+   # When trying to choose top 5-10 from 3000+ counties, we are really looking for potential outliers. I think it would be helpful
+   # to have some info reminding the user what a "average America" looks like.
+   #
+   # The chartJSRadar is flexible enough, that one can click on the name tags of plotted polygons, to toggle them on and off
+   # -----------------------------------------------------------------------------------------------------------------------------
 
+   # flip values following user's input -- this is the same thing in the weighted_val()
+   radio_chk = c(input$radio2 == 2, input$radio7 == 2)
+   cols_flip = c(2,7)[radio_chk]
+   
+   if (length(cols_flip)!=0) mydf[,cols_flip] = scalar - mydf[,cols_flip]        # render radar chart
+   
+   radardf       = mydf                      # potential memory waste -- worth some additional thought when I revisit. Now it works...
+   radardf$score = weighted_val()$v
+   
+   radardf$county_names = dummy$county_state
+   
+   radardf <- radardf %>%
+     filter(!is.na(score)) %>%
+     arrange(desc(score))
+   
+   radardf_plot <- radardf[,c(1,2,3,4,5,6,7)]                                                           ####### room for improvement
+   
+   scores_top        = as.data.frame(t(head(radardf_plot,3)))                                        
+   names(scores_top) = head(radardf$county_names,3)
+   labs              = c("air","vote","income","cost","income/cost","crime rate","pop den")             ####### room for improvement
+   
+   # quantile data
+   qt = lapply(mydf, quantile, name=FALSE, na.rm=TRUE)
+   dd = as.data.frame(matrix(unlist(qt), nrow=length(unlist(qt[1]))))
+   
+   scores_qt        = as.data.frame(t(dd[2:4,]))
+   names(scores_qt) = c("25%", "median", "75%")
 
+   scores_plot = cbind(scores_top, scores_qt)
+   
+   tagList(chartJSRadar(scores_plot, labs , maxScale = NULL))                   # the use of tagList here is worth noting
+                                                                                # this is a trick from one of Joe Cheng's online reply that
+                                                                                # would make this renderUI work
+ }) # end of renderUI (or renderChartJSRadar if it is more stable in the future)
+ 
+ 
+ 
+ 
+ # ======================================================================================
+ # ======================================================================================
+ # ====================              Tab 2 STARTS               =========================
+ # ======================================================================================
+ # ======================================================================================
+ 
+ # -------------------------------------------------------------------------------------
+ # Tab 2 is a searchable data table
+ # The key features are
+ #    1) the rows displayed in tab 2 is the filterd result from tab 1 sliders
+ #    2) user can click on multiple rows here on the data table, there is a logic above
+ #       taking the (lat, lng) from highlighted rows, and drop markers on the tab 1 map
+ # -------------------------------------------------------------------------------------
+ 
+ output$leafmaptable = DT::renderDataTable({
+   
+   as.data.frame(leafmap)[weighted_val()$i,]    # render FILTERED data table for tab 2 -- 
+                                                # sliders on tab 1 DO INTERACT with tab 3 data
  })
 
-
-  # output$radar <- renderChartJSRadar({
-  output$radar <- renderUI({
-
-
-    # print("renderChartJSRadar")
-    # print(dummy_norm)
-
-    # this IS the mydf data frame!!!!!
-    # flip values following user's input
-    radio_chk = c(input$radio2 == 2, input$radio7 == 2)
-    cols_flip = c(2,7)[radio_chk]
-    if (length(cols_flip)!=0) mydf[,cols_flip] = scalar - mydf[,cols_flip]                  # render radar chart
-
-    radardf = mydf
-    radardf$score = weighted_val()$v
-
-    radardf$county_names = dummy$county_state
-
-    radardf <- radardf %>%
-      filter(!is.na(score)) %>%
-        arrange(desc(score))
-
-    radardf_plot <- radardf[,c(1,2,3,4,5,6,7)]                                                                                                                  ####### expand
-
-
-    # print(names(radardf))
-    # print(head(radardf_plot))
-    # print(t(head(radardf_plot)))
-
-    scores_top = as.data.frame(t(head(radardf_plot,3)))                                        #
-    names(scores_top) = head(radardf$county_names,3)
-    labs = c("air","vote","income","cost","income/cost","crime rate","pop den")                                                                                ####### this needs to be generalized
-    # print("here")
-    # print(scores)
-    # print(dd)
-    
-    # quantile data
-    qt = lapply(mydf, quantile, name=FALSE, na.rm=TRUE)
-    dd  <-  as.data.frame(matrix(unlist(qt), nrow=length(unlist(qt[1]))))
-    
-    scores_qt = as.data.frame(t(dd[2:4,]))
-    names(scores_qt) = c("25%", "median", "75%")
-    
-    
-    
-    scores_plot = cbind(scores_top, scores_qt)
-    
-    tagList(chartJSRadar(scores_plot, labs , maxScale = NULL))
-
-
-    # ===================================================================================
-    # # print(weighted_val()$i)
-    #
-    # #
-    # chartJSRadar(skills, main = "Data Science Radar")
-    # ===================================================================================
-
-  }) # end of renderChartJSRadar
-
-  output$leafmaptable = DT::renderDataTable({
-    as.data.frame(leafmap)[weighted_val()$i,]                                             # render FILTERED data table for tab 2 -- sliders on tab 1 DO INTERACT with tab 3 data
-  })
-  
-  # output$corr <- renderUI({
-  #   
-  # })
-  
-  
-  
-  
-  # ======================================================================================
-  # ====================          Map related logic ENDS         =========================
-  # ====================                                         =========================
-  # ====================          Corr Plot Logic STARTS         =========================
-  # ======================================================================================
-  
-  
-  
-  
-  dataset <- reactive({
-    dummy
-  })
-  
-  numericColumns <- reactive({
-    df <- dataset()
-    colnames(df)[sapply(df, is.numeric)]                                                  # get col names
-  })
-  
-  correlation <- reactive({
-    data <- dataset()
-    variables <- input$variables
-    if(is.null(data) || !length(intersect(variables, colnames(data)))) {
-      NULL
-    } else {
-      cor(dataset()[,input$variables], use = input$corUse, method = input$corMethod)      # computational core -- corr calc
-    }
-  })
-  
-  sigConfMat <- reactive({
-    val <- correlation()
-    if(!is.null(val))
-      corTest(val, input$confLevel)                                                        # calling correlation function, send to corTest then calc for p-value and CI
-  })
-  
-  ## Data and Correlation Validation and UI Updates ##########
-  
-  #Update hclust rect max
-  observe({
-    val <- correlation()
-    if(!is.null(val))
-      updateNumericInput(session, "plotHclustAddrect", max = nrow(val))
-  })
-  
-  #Update variable selection
-  observe({
-    updateCheckboxGroupInput(session, "variablesCheckbox", choices = numericColumns(), selected = numericColumns())
-    
-    updateSelectInput(session, "variables", choices = numericColumns(), selected = numericColumns())
-  })
-  
-  #Link Variable Selection
-  observe({
-    if(input$variablesStyle == "Checkbox") {
-      updateCheckboxGroupInput(session, "variablesCheckbox", selected = isolate(input$vairables))
-    }
-  })
-  observe({
-    updateSelectInput(session, "variables", selected = input$variablesCheckbox)
-  })
-  
-  output$warning <- renderUI({
-    val <- correlation()
-    if(is.null(val)) {
-      tags$i("Waiting for data input...")
-    } else {
-      isNA <- is.na(val)
-      if(sum(isNA)) {
-        tags$div(
-          tags$h4("Warning: The following pairs in calculated correlation have been converted to zero because they produced NAs!"),
-          helpText("Consider using an approriate NA Action to exclude missing data"),
-          renderTable(expand.grid(attr(val, "dimnames"))[isNA,]))
-      }
-    }
-  })
-  
-  ## Correlation Plot ####################################
-  
-  output$corrPlot <- renderPlot({
-    val <- correlation()
-    if(is.null(val)) return(NULL)
-    
-    val[is.na(val)] <- 0
-    args <- list(val,
-                 order = if(input$plotOrder == "manual") "original" else input$plotOrder, 
-                 hclust.method = input$plotHclustMethod, 
-                 addrect = input$plotHclustAddrect,
-                 
-                 p.mat = sigConfMat()[[1]],
-                 sig.level = if(input$sigTest) input$sigLevel else NULL,
-                 insig = if(input$sigTest) input$sigAction else NULL,
-                 
-                 lowCI.mat = sigConfMat()[[2]],
-                 uppCI.mat = sigConfMat()[[3]],
-                 plotCI = if(input$showConf) input$confPlot else "n")
-    
-    if(input$showConf) {
-      do.call(corrplot, c(list(type = input$plotType), args))
-    } else if(input$plotMethod == "mixed") {
-      do.call(corrplot.mixed, c(list(lower = input$plotLower,
-                                     upper = input$plotUpper),
-                                args))
-    } else {
-      do.call(corrplot, c(list(method = input$plotMethod, type = input$plotType), args))
-    }
-  }) # end of renderPlot to output$corrPlot
-  
-  
-  
-  
-  # ======================================================================================
-  # ====================                                         =========================
-  # ====================          Corr Plot Logic Ends           =========================
-  # ====================                                         =========================
-  # ======================================================================================
-  
-  
-  
-  
-  
-}
+ 
+ # ======================================================================================
+ # ====================         Map related logic ENDS          =========================
+ # ====================                                         =========================
+ # ====================      Tab 3 Corr Plot Logic STARTS       =========================
+ # ======================================================================================
+ 
+ # the motivation for the correlation matrix analysis is that,
+ # certain variables people usually consider while making a ranking decision might be highly CORRELATED.
+ # this is an effort to detect them with an interactive interface
+ 
+ # -----------------------------------------------------------------------------
+ # The correlation matrix tab is largely adapted from saurfang's
+ #            https://github.com/saurfang/shinyCorrplot
+ # The whole thing is a very flexible and interactive correlation matrix plotter
+ # -----------------------------------------------------------------------------
+ 
+ dataset <- reactive({
+   dummy
+ })
+ 
+ numericColumns <- reactive({
+   df <- dataset()
+   colnames(df)[sapply(df, is.numeric)]                                             # get col names
+ })
+ 
+ correlation <- reactive({
+   data <- dataset()
+   variables <- input$variables
+   if(is.null(data) || !length(intersect(variables, colnames(data)))) {
+     NULL
+   } else {
+     cor(dataset()[,input$variables], use = input$corUse, method = input$corMethod) # computational core -- corr calc
+   }
+ })
+ 
+ sigConfMat <- reactive({
+   val <- correlation()
+   if(!is.null(val))
+     corTest(val, input$confLevel)                                                  # calling correlation function, 
+                                                                                    # send to corTest then calc for p-value and CI
+ })
+ 
+ ## Data and Correlation Validation and UI Updates ##########
+ 
+ #Update hclust rect max
+ observe({
+   val <- correlation()
+   if(!is.null(val))
+     updateNumericInput(session, "plotHclustAddrect", max = nrow(val))
+ })
+ 
+ #Update variable selection
+ observe({
+   updateCheckboxGroupInput(session, "variablesCheckbox", choices = numericColumns(), selected = numericColumns())
+   
+   updateSelectInput(session, "variables", choices = numericColumns(), selected = numericColumns())
+ })
+ 
+ #Link Variable Selection
+ observe({
+   if(input$variablesStyle == "Checkbox") {
+     updateCheckboxGroupInput(session, "variablesCheckbox", selected = isolate(input$vairables))
+   }
+ })
+ observe({
+   updateSelectInput(session, "variables", selected = input$variablesCheckbox)
+ })
+ 
+ output$warning <- renderUI({
+   val <- correlation()
+   if(is.null(val)) {
+     tags$i("Waiting for data input...")
+   } else {
+     isNA <- is.na(val)
+     if(sum(isNA)) {
+       tags$div(
+         tags$h4("Warning: The following pairs in calculated correlation have been converted to zero because they produced NAs!"),
+         helpText("Consider using an approriate NA Action to exclude missing data"),
+         renderTable(expand.grid(attr(val, "dimnames"))[isNA,]))
+     }
+   }
+ })
+ 
+ ## Correlation Plot ####################################
+ 
+ output$corrPlot <- renderPlot({
+   val <- correlation()
+   if(is.null(val)) return(NULL)
+   
+   val[is.na(val)] <- 0
+   args <- list(val,
+                order = if(input$plotOrder == "manual") "original" else input$plotOrder, 
+                hclust.method = input$plotHclustMethod, 
+                addrect = input$plotHclustAddrect,
+                
+                p.mat = sigConfMat()[[1]],
+                sig.level = if(input$sigTest) input$sigLevel else NULL,
+                insig = if(input$sigTest) input$sigAction else NULL,
+                
+                lowCI.mat = sigConfMat()[[2]],
+                uppCI.mat = sigConfMat()[[3]],
+                plotCI = if(input$showConf) input$confPlot else "n")
+   
+   if(input$showConf) {
+     do.call(corrplot, c(list(type = input$plotType), args))
+   } else if(input$plotMethod == "mixed") {
+     do.call(corrplot.mixed, c(list(lower = input$plotLower,
+                                    upper = input$plotUpper),
+                               args))
+   } else {
+     do.call(corrplot, c(list(method = input$plotMethod, type = input$plotType), args))
+   }
+ }) # end of renderPlot to output$corrPlot
+ 
+ # ======================================================================================
+ # ====================                                         =========================
+ # ====================          Corr Plot Logic Ends           =========================
+ # ====================                                         =========================
+ # ======================================================================================
+ 
+} # end of server.R

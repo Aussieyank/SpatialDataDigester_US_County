@@ -14,8 +14,8 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
            # ======================================================================================
            
            # --------------------------------------------------------------------------------------
-           # This main tab layout and style are inspired by Joe Cheng's famous 'superzip' example
-           #              https://shiny.rstudio.com/gallery/superzip-example.html
+           #   This main tab layout and style are inspired by Joe Cheng's 'superzip' example
+           #               https://shiny.rstudio.com/gallery/superzip-example.html
            # --------------------------------------------------------------------------------------
            tabPanel("Interactive map",
                     div(class="outer",
@@ -28,6 +28,10 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                         tags$style(type = "text/css",
                                    ".radio label {font-size: 12px;}
                                    "),
+                        
+                        # ============================================== #
+                        #              THE MAP -- leaflet map            #
+                        # ============================================== #
                         
                         leafletOutput("map", width="100%", height="100%"),
                         verbatimTextOutput("out"),
