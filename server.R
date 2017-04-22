@@ -37,7 +37,9 @@ function(input, output, session) {
     #    calculate for all counties the distance towards this (lat,lng) location
     # 5) row filtering based on the slider inputs (distance from step 4 is NOT used by design)
     # 6) weighted average calculation
-    # 7) return a list
+    # 7) return $v -- a vector of score for each county
+    #           $i -- index vector for kept rows of data (to generate filtered data table for tab 2)
+    #           $p -- for pie chart
     # ----------------------------------------------------------------------------------------------
     
     
@@ -77,7 +79,7 @@ function(input, output, session) {
     #                                                                                                                   #
     #       >> I DO NOT want the distance data to enter the row filtering process                                       #
     #           -- easily done by human eyes on a map, value added for user is low                                      #
-    #           -- lots of other things need to be calculated also to update UI, added value might not worth the effort #
+    #           -- several other things need to be done also to update UI, added value might not justify the effort     #
     #           -- this is a 2-wk project, many other 'low-hanging-fruit' features need to be developed                 #
     #                                                                                                                   #
     #       >> I DO want the distance data to enter the weighted average scoring process.                               #
@@ -120,10 +122,11 @@ function(input, output, session) {
     
     # ---------------------------------------------------------- special note ----------------------------------------------------------
     # the logic here is to make sure the row filtering is successful in all these situations
-    # a) multiple 'static' data chosen, distance data NOT chosen (this is the usual case before adding the dynamic distance calculation)
+    # a) multiple 'static' data chosen, distance data NOT chosen (this is the usual case before adding the distance calculation)
     # b) multiple 'static' data AND the dynamic distance are chosen --> the distance value does not filter things
     # c) NO 'static' data is chosen, but dynamic distance calc IS chosen --> totchk == 1, but no filtering
     # d) nothing is chosen at all, no row filtering
+    # ----------------------------------------------------------------------------------------------------------------------------------
 
     while(totchk) {
       if (colskeep[i] != i_dyn) {
@@ -152,7 +155,7 @@ function(input, output, session) {
     # generate data for the pie chart -- names of inputs considered in the score calc, and their weights
     PieInput = data.frame("Parameters" = radar_vars[box_vec], "Weights" = wts)
     
-    ## 7) return
+    ## 7) return: $v the score, $i the row ind for tab 2, $p for pie chart
     list(v = weighted_score,i = rowskeep, p = PieInput)
 
 

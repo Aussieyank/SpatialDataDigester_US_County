@@ -24,7 +24,7 @@ navbarPage(div(style='font-size: 20px;', "Geospatial Data Digester -- US County 
                           # Include custom CSS
                           includeCSS("styles.css")
                         ),
-                        # plot-mouse interaction to work properly
+                        
                         tags$style(type = "text/css",
                                    ".radio label {font-size: 12px;}
                                    "),
