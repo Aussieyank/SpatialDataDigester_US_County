@@ -3,7 +3,7 @@
 # Chao Shi
 # chao.shi.datasci@gmail.com
 
-navbarPage(div(style='font-size: 30px;', "Geospatial Data Digester -- US County v0.8"),
+navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"),
            windowTitle = "Olivia loves colorful maps",
            id="nav",
            collapsible = TRUE, # small-screen friendly menu bar (good for mobile devices)
@@ -27,7 +27,7 @@ navbarPage(div(style='font-size: 30px;', "Geospatial Data Digester -- US County 
                         ),
                         
                         tags$style(type = "text/css",
-                                   ".radio label {font-size: 12px;}
+                                   ".radio label {font-size: 11px;}
                                    "),
                         
                         # ============================================== #
@@ -65,9 +65,9 @@ navbarPage(div(style='font-size: 30px;', "Geospatial Data Digester -- US County 
                                       
                                       # Politics - VoteDiff
                                       fluidRow(
-                                        column(3, checkboxInput("ck2", "Politics", value = FALSE, width = NULL)),
+                                        column(2, checkboxInput("ck2", "Politics", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck2",
-                                                         column(2, radioButtons("radio2", label = NULL,
+                                                         column(3, radioButtons("radio2", label = NULL,
                                                                                 choices = list("prefer dem" = 1, "prefer gop" = 2), 
                                                                                 selected = 1)),
                                                          column(3,numericInput("w2", div(style='font-size: 12px;', "wt"),
@@ -90,7 +90,8 @@ navbarPage(div(style='font-size: 30px;', "Geospatial Data Digester -- US County 
                                         ) # end of conditionalPanel
                                       ),  # end of fluidRow 3
                                       
-                                      fluidRow(                                                                    # Living Cost
+                                      # Living Cost
+                                      fluidRow(
                                         column(5, checkboxInput("ck4", "Living Cost", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck4",
                                                          column(3,numericInput("w4", div(style='font-size: 12px;', "wt"),
@@ -107,7 +108,7 @@ navbarPage(div(style='font-size: 30px;', "Geospatial Data Digester -- US County 
                                         conditionalPanel(condition = "input.ck5",
                                                          column(3,numericInput("w5", div(style='font-size: 12px;', "wt"),
                                                                                20, min = 1, max = 100)),
-                                                         column(4,sliderInput("sl5", div(style='font-size: 10px;', "$/year"),
+                                                         column(4,sliderInput("sl5", div(style='font-size: 10px;', ""),
                                                                               min = MINs[5], max = MAXs[5], value = c(MINs[5],MAXs[5]),
                                                                               ticks=FALSE))
                                         ) # end of conditionalPanel
@@ -130,11 +131,11 @@ navbarPage(div(style='font-size: 30px;', "Geospatial Data Digester -- US County 
                                         column(3, checkboxInput("ck7", "Population Density", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck7",
                                                          column(2, radioButtons("radio7", label = NULL,
-                                                                                choices = list("love the crowd" = 1, "gimme some space" = 2), 
+                                                                                choices = list("crowd" = 1, "space" = 2), 
                                                                                 selected = 1)),
                                                          column(3,numericInput("w7", div(style='font-size: 12px;', "wt"),
                                                                                20, min = 1, max = 100)),
-                                                         column(4,sliderInput("sl7", div(style='font-size: 10px;', ""),
+                                                         column(4,sliderInput("sl7", div(style='font-size: 10px;', "log(population/area)"),
                                                                               min = MINs[7], max = MAXs[7], value = c(MINs[7],MAXs[7]),
                                                                               ticks=FALSE))
                                         ) # end of conditionalPanel
@@ -151,12 +152,12 @@ navbarPage(div(style='font-size: 30px;', "Geospatial Data Digester -- US County 
                                       
                                       # mouse input for distance calc
                                       fluidRow(
-                                        column(3, checkboxInput("ck100", "Distance to...", value = FALSE, width = NULL)),
+                                        column(3, checkboxInput("ck100", "Distance to", value = FALSE, width = NULL)),
                                         conditionalPanel(condition = "input.ck100",
                                                          column(2, radioButtons("radio100", label = NULL,
                                                                                 choices = list("close to" = 1, "away from" = 2), 
                                                                                 selected = 1)),
-                                                         column(3,numericInput("w100", div(style='font-size: 12px;', "wt"),
+                                                         column(3, numericInput("w100", div(style='font-size: 12px;', "wt"),
                                                                                20, min = 1, max = 100)),
                                                          column(4, verbatimTextOutput('click_lat_lon'))
                                                          
@@ -192,7 +193,7 @@ navbarPage(div(style='font-size: 30px;', "Geospatial Data Digester -- US County 
                         
                         absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
                                       draggable = TRUE, top = 720, left = "auto", right = 650, bottom = "auto",
-                                      width = 300, height = "auto",
+                                      width = 320, height = "auto",
                                       
                                       # pie chart
                                       htmlOutput("pie")

@@ -3,28 +3,51 @@
 # Chao Shi
 # chao.shi.datasci@gmail.com
 
-# ======= wishlist - brain dump ========
+# ======= final polishing wishlist - brain dump ========
 
-   # done #  !! a non-quantile color pallete is needed when plotting lving cost and Inc/Cost data alone (when filtering towards the high cost end)
+# save data as .rda, separate global.R into dataPrep.R and global.R
+#        -- in dataPrep.R,    read, clean and merge data sets
+#        -- in global.R, load libraries (some require the devtool version)
+
+# readme.md   and     insight.md
+
+# try upload to shinyapp.io
+
+# 10-slide presentation file
+
+# git to bootcamp project folder
+
+
+
+# education data
+
+       # done #  !! a non-quantile color pallete is needed when plotting lving cost and Inc/Cost data alone (when filtering towards the high cost end)
                   # --> when the amount of data is very limited, breaking into quantiles doesn't make sense either
                   # --> maybe add a data size check, if smaller than a threshold, switch away from quantile color scale
 
-   # done # !! population is not normalized correctly (range overflow)  -> new york is a good place to check if this is fixed on population
+       # done # !! population is not normalized correctly (range overflow)  -> new york is a good place to check if this is fixed on population
                 # --> added a round(,2) step in global.R, to limit numeric values to num_decimal = 2
 
-   # done #    window title / tab title when oened in a browser
+       # done #    window title / tab title when oened in a browser
 
-#  create popup on markers, turn on mouse hover for markers
+       # TRIED, but... for some reason it didn't work for me # create popup on markers, turn on mouse hover for markers
 
-   # done #  add score to a column in tab 2 (data table, so users can sort wrt score, then drop markers)
+       # done #  add score to a column in tab 2 (data table, so users can sort wrt score, then drop markers)
 
-#  click on a county on the map, radar chart should show info about this county too
+       # ON HOLD -- seems to need some GeoJSON code, not a quick since I'm only getting lat lon from mouse click
+                  # I assume if I assign an ID to each polygon, that might be helpful, but I only have 1 day to finalize now 
+                  # Desire: seems click on a county on the map, radar chart should show info about this county too
 
-#  color bar, red on top, edit text
+       # done # for 1 variable case (for example politics), row filtering works now (bug fix)
 
-#  check words on the sliders, units
+       # done # color bar, red on top, edit text <-- right now it seems hard to let leaflet legend plot bigger numbers on top
+                                                     # the 'reverse' option in palletes flips color, but not the numbers
+                                                     # therefore for this project I use 'colors' and 'label' to manually define the legend I want
 
-#  in global.R move key constants to the beginning
+       # DONE #   check words on the sliders, units
+
+#  categorical data example -- climate zone data
+
 
 # > ?reactiveFileReader
 # > ?reactivePoll
@@ -191,12 +214,6 @@ function(input, output, session) {
   # ======================================================================================
   
   
-  # renders current mouse-clicked lat lng to a text box
-  output$out <- renderPrint({
-    validate(need(input$map_shape_click, FALSE))                                           
-    str(input$map_shape_click)
-  })
-  
   # ======================= #
   #    floating pie chart   #    for user to understand the chosen inputs and weights 
   # ======================= #
@@ -214,7 +231,7 @@ function(input, output, session) {
   popup_dat <- reactive({
     paste0("<strong>County: </strong>",
            leafmap$county_state,
-           "<br><strong>Score 0-10: </strong>",
+           "<br><strong>Score 0-100: </strong>",
            round(weighted_val()$v,0),
            "<br><strong>Air Quality: </strong>",
            leafmap$airqlty,                                                                # leaflet popup info preparation
@@ -260,12 +277,20 @@ function(input, output, session) {
 
   observeEvent(input$do,{
     
-    proxy <- leafletProxy("map")
+    # mypallete_spec_11 = c('#9e0142','#d53e4f','#f46d43','#fdae61','#fee08b','#ffffbf','#e6f598','#abdda4','#66c2a5','#3288bd','#5e4fa2')
+
+    # mypallete = rev(mypallete)
     
+    mypallete    = mypallete_spec_10
+    mycolorlabel = labels_spec_10
+    colortitle   = 'Score'
+    
+    
+    pal <- colorBin(mypallete, c(0,100), bins = 10, pretty = FALSE, na.color = "transparent", alpha = FALSE, reverse = TRUE)
     # pal <- colorQuantile("YlOrRd", NULL, n = 20)
-    pal <- colorQuantile("Spectral", NULL, n = 20, reverse = TRUE,na.color = "transparent")
-    # pal <- colorBin("Spectral", c(0,10), bins = 11, pretty = TRUE, na.color = "transparent", alpha = FALSE, reverse = TRUE)
+    # pal <- colorQuantile(mypallete, NULL, n = 20, reverse = TRUE, na.color = "transparent")
     # pal <- colorBin("RdBu", c(-10,10), bins = 11, pretty = TRUE, na.color = "#808080", alpha = FALSE, reverse = FALSE)
+    
     
     # ------------------------------------------------------------ special note -------------------------------------------------------
     # About the color bar
@@ -285,8 +310,16 @@ function(input, output, session) {
     # ----------------------------------------------------------------------------------------------------------------------------------
     
     if (input$ck2 == TRUE & !any(input$ck1,input$ck3,input$ck4,input$ck5,input$ck6,input$ck7,input$ck100)) {
-      color_val = dummy2[,2]
-      pal <- colorBin("RdBu", c(-1,1), bins = 11, na.color = "transparent", alpha = FALSE, reverse = FALSE)
+      # slider inputs should still have an impact as row filters
+      color_val                   = rep(NaN, nrow(dummy2))
+      color_val[weighted_val()$i] = dummy2[weighted_val()$i,2]
+      
+      mypallete    = mypallete_RdBu_10
+      mycolorlabel = labels_RdBu_10
+      colortitle   = '2016 Election'
+      
+      # fine tune color selection
+      pal <- colorBin(mypallete, c(-1,1), bins = 10, na.color = "transparent", alpha = FALSE, reverse = FALSE)
     } else color_val = as.vector(weighted_val()$v)
     
                                                                                                #### <- additional special color palletes
@@ -295,16 +328,19 @@ function(input, output, session) {
     # isolate({
       
       # polygon update module
-      proxy %>%
-        clearShapes() %>%
-        addPolygons(data=leafmap,
-                    fillColor = pal(color_val),
-                    fillOpacity = 0.8,
-                    color = "#BDBDC3",
-                    weight = 1,
-                    popup = popup_dat())%>%
-        addLegend("bottomleft", pal=pal, values=color_val, title="color by title",
-                  layerId="colorLegend")
+    proxy <- leafletProxy("map")
+    proxy %>%
+      clearShapes() %>%
+      addPolygons(data=leafmap,
+                  fillColor = pal(color_val),
+                  fillOpacity = 0.8,
+                  color = "#BDBDC3",
+                  weight = 1,
+                  popup = popup_dat())%>%
+      addLegend("bottomleft", title= colortitle,                     #pal=pal, values=color_val,
+                colors = mypallete,
+                labels = mycolorlabel,
+                layerId="colorLegend")
       
     # }) # end of isolate
 
@@ -319,13 +355,16 @@ function(input, output, session) {
     
     s = input$leafmaptable_rows_selected   # '_rows_selected' is the leaflet syntax observing mouse click on data tables
     
-    markers = as.data.frame(leafmap)[weighted_val()$i,][s,c("lat","lon")]
+    markers       = dummy[weighted_val()$i,][s,c("lat","lon","county_state")]
+
+    # label_content = as.data.frame(leafmap)[weighted_val()$i,][s,c("county_state")]
 
     proxy <- leafletProxy("map")
     proxy %>% 
       clearMarkers() %>% 
-      addMarkers(data=leafmap,lng = markers[,2], lat =markers[,1])
-    
+      addMarkers(lat = markers[,1], lng = markers[,2])
+      # addMarkers(lat = markers[,1], lng = markers[,2], label = markers[,3])   # for some reason, the marker label doesn't work for me here
+
   })
   
   
@@ -336,7 +375,7 @@ function(input, output, session) {
     # observe({                                                    # this works
     # observeEvent(input$map_shape_click,{                         # this works
     
-    xy = rbind(c(input$map_shape_click$lng, input$map_shape_click$lat))
+    rbind(c(input$map_shape_click$lng, input$map_shape_click$lat))
     
   }
   

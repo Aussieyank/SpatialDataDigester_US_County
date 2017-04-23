@@ -19,7 +19,7 @@ library(corrplot)
 library(htmltools)
 library(ggplot2)
 
-
+source("helpers.R")
 source("sortable.R", local = TRUE)
 source("corTest.R", local = TRUE)
 
@@ -235,6 +235,8 @@ county_dat <- full_join(county_dat, crimedat, by=c("GEOID"))
 county_dat <- full_join(county_dat, areadat, by=c("GEOID"))
 
 county_dat$pop_den_log = log(county_dat$population / county_dat$censusarea)
+# county_dat$pop_den_log = county_dat$population / county_dat$censusarea
+
 
 
 county_dat <- full_join(county_dat, zillowdat, by=c("GEOID"))
