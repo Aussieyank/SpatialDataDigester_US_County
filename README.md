@@ -1,6 +1,6 @@
 # Geospatial Data Digester -- US County
 
-See a version of it live at (include shinyapp.io link here)
+See a version of it live at https://chaoshi.shinyapps.io/SpatialDataDigester_US_County/
 
 You can run this demo with:
 ```

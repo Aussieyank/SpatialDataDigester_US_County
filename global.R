@@ -29,9 +29,9 @@ library(corrplot)
 library(htmltools)
 library(ggplot2)
 
-source("helpers.R")
-source("sortable.R", local = TRUE)
-source("corTest.R", local = TRUE)
+source("./helpers.R")
+source("./sortable.R", local = TRUE)
+source("./corTest.R", local = TRUE)
 
 scalar = 100
 
