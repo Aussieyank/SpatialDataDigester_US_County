@@ -1,12 +1,17 @@
-# Geospatial Data Digester UI Prototype
+##############################################
+# Geospatial Data Digester Prototyped in R -- 
+# A Shiny Project @ NYC Data Science Academy
+# 
 #
 # Chao Shi
 # chao.shi.datasci@gmail.com
+# 4/23/2017
+##############################################
 
 navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"),
            windowTitle = "Olivia loves colorful maps",
            id="nav",
-           collapsible = TRUE, # small-screen friendly menu bar (good for mobile devices)
+           collapsible = TRUE,
            
            # ======================================================================================
            # ====================                                         =========================
@@ -22,7 +27,6 @@ navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"
                     div(class="outer",
                         
                         tags$head(
-                          # Include custom CSS
                           includeCSS("styles.css")
                         ),
                         
@@ -47,7 +51,7 @@ navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"
                                       
                                       # ---------------------------------------------------------------------------
                                       # Each fluidRow is for 1 input check box
-                                      # Due to specific contidionalPanel logic, checkboxGroupInput is not used here
+                                      # Due to specific contidionalPanel design, checkboxGroupInput is not chosen
                                       # ---------------------------------------------------------------------------
                                       
                                       # Air Quality
@@ -142,12 +146,12 @@ navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"
                                       ),  # end of fluidRow 7
                                       
                                       # ##########################################################################################
-                                      #  ......>>    Addtional input fluidRow should be added here before the mouse click row next
+                                      #  ......>>    Addtional input fluidRow should be added here before the mouse click fluidRow
                                       # ##########################################################################################
                                       
                                       # -----------------------------------------------------------------------------------------------
-                                      # End of regular fluidRow items. The above rows all have a slider and min max input for filtering
-                                      # The next fluidRow is for mouse-click (lat,lng) input. This will not be used to filter data
+                                      # End of regular fluidRow items. The above rows each have a slider for filtering
+                                      # The fluidRow below is for mouse-click (lat,lng) input. This will not be used to filter data
                                       # -----------------------------------------------------------------------------------------------
                                       
                                       # mouse input for distance calc
@@ -165,8 +169,8 @@ navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"
                                       ),  # end of fluidRow #100 for mouse click input
                                       
                                       
-                                      # action button -- user triggers a plot refresh when all changes are done,
-                                      #                  since backend calculation and map refresh take time 
+                                      # action button -- user triggers a plot refresh when all changes are made,
+                                      #                  since backend calculation and map refresh take some time 
                                       #                  (filtering > weighted average > plot)
                                       actionButton("do", "Update Plots",icon("refresh"), width="100%")
                                       
@@ -188,7 +192,7 @@ navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"
                         
                         
                         # ======================= #
-                        #    floating pie chart   #    for user to understand the chosen inputs and weights 
+                        #    floating pie chart   #    user choice and weights visual reminder
                         # ======================= #
                         
                         absolutePanel(id = "controls", class = "panel panel-default", fixed = TRUE,
@@ -198,7 +202,7 @@ navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"
                                       # pie chart
                                       htmlOutput("pie")
                                       
-                        ),  # end of absolutePanel "keyplots"
+                        ),  # end of absolutePanel
                         
                         
                         tags$div(id="cite",
@@ -217,7 +221,7 @@ navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"
            tabPanel("Map filtered data explorer",
                     
                     DT::dataTableOutput("leafmaptable")   # in the server.R logic, user can click 
-                                                          # on multiple rolls, markers will show
+                                                          # on multiple rows, markers will show
                                                           # up on tab 1 map (read lat-lng, plot)
            ), # end of tabPanel
            
@@ -229,9 +233,8 @@ navbarPage(div(style='font-size: 25px;', "Geospatial Data Digester -- US County"
            # ======================================================================================
            
            # -----------------------------------------------------------------------------
-           # The correlation matrix tab is largely adapted from saurfang's
+           # This correlation matrix tab is largely adapted from saurfang's shinyCorrplot
            #                  https://github.com/saurfang/shinyCorrplot
-           # The whole thing is a very flexible and interactive correlation matrix plotter
            # -----------------------------------------------------------------------------
            tabPanel("Correlation analysis",
                     

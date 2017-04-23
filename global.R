@@ -1,3 +1,13 @@
+##############################################
+# Geospatial Data Digester Prototyped in R -- 
+# A Shiny Project @ NYC Data Science Academy
+# 
+#
+# Chao Shi
+# chao.shi.datasci@gmail.com
+# 4/23/2017
+##############################################
+
 # devtools::install_github("MangoTheCat/radarchart")
 library(sp)
 library(rgeos)
