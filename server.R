@@ -62,7 +62,7 @@ function(input, output, session) {
     radio_chk = c(input$radio2 == 2, input$radio7 == 2)  # need manual change if the order of fluidRow items are changed in ui.R
     cols_flip = c(2,7)[radio_chk]
     
-    if (length(cols_flip)!=0) mydf[,cols_flip] = scalar - mydf[,cols_flip]
+    if (length(cols_flip)!=0) mydf_norm[,cols_flip] = scalar - mydf_norm[,cols_flip]
 
     # get weights for the weighted average step later
     wtskeep = c(as.numeric(input$w1),as.numeric(input$w2),as.numeric(input$w3),
@@ -124,7 +124,7 @@ function(input, output, session) {
     ## 5) row filtering
 
     # get 2 vectors of row numbers:   rowskeep,   rowsout
-    # filtered mydf will be a n(rowskeep)-by-n(colskeep) matrix, 
+    # filtered mydf_norm_norm will be a n(rowskeep)-by-n(colskeep) matrix, 
     
     # dumb version
     i=1
@@ -154,14 +154,14 @@ function(input, output, session) {
 
     ## 6) weighted average calculation -- getting the score for each county
     
-    # as.matrix(mydf) %*% wts / sum(wts)             # first version of weighted sum, WITHOUT filtering
-    # as.matrix(mydf[,colskeep]) %*% wts / sum(wts)  # now with column filtering
+    # as.matrix(mydf_norm) %*% wts / sum(wts)             # first version of weighted sum, WITHOUT filtering
+    # as.matrix(mydf_norm[,colskeep]) %*% wts / sum(wts)  # now with column filtering
     
     weighted_score =  rep(NaN, nrow(dummy2))
     
     # weighted sum, with col and row filtering, AND dist_vec attached (when dist_vec is empty this still works)
-    weighted_score[rowskeep] =cbind(as.matrix(mydf[rowskeep,]),dist_vec[rowskeep,])[,colskeep] %*% wts / sum(wts)  
-    # weighted_score[rowskeep] = as.matrix(mydf[rowskeep,][,colskeep]) %*% wts / sum(wts)  # weighted sum, with both col and row filtering
+    weighted_score[rowskeep] =cbind(as.matrix(mydf_norm[rowskeep,]),dist_vec[rowskeep,])[,colskeep] %*% wts / sum(wts)  
+    # weighted_score[rowskeep] = as.matrix(mydf_norm[rowskeep,][,colskeep]) %*% wts / sum(wts)  # weighted sum, with both col and row filtering
                                                                                            # BEFORE introducing the dynamic distance calc
     
     # generate data for the pie chart -- names of inputs considered in the score calc, and their weights
@@ -313,7 +313,7 @@ function(input, output, session) {
     
     s = input$leafmaptable_rows_selected   # '_rows_selected' is the leaflet syntax observing mouse click on data tables
     
-    markers       = dummy[weighted_val()$i,][s,c("lat","lon","county_state")]
+    markers       = mydf[weighted_val()$i,][s,c("lat","lon","county_state")]
 
     # label_content = as.data.frame(leafmap)[weighted_val()$i,][s,c("county_state")]
 
@@ -405,12 +405,12 @@ function(input, output, session) {
    radio_chk = c(input$radio2 == 2, input$radio7 == 2)
    cols_flip = c(2,7)[radio_chk]
    
-   if (length(cols_flip)!=0) mydf[,cols_flip] = scalar - mydf[,cols_flip]        # render radar chart
+   if (length(cols_flip)!=0) mydf_norm[,cols_flip] = scalar - mydf_norm[,cols_flip]        # render radar chart
    
-   radardf       = mydf                      # potential memory waste -- worth some additional thought when I revisit. Now it works...
+   radardf       = mydf_norm                      # potential memory waste -- worth some additional thought when I revisit. Now it works...
    radardf$score = weighted_val()$v
    
-   radardf$county_names = dummy$county_state
+   radardf$county_names = mydf$county_state
    
    radardf <- radardf %>%
      filter(!is.na(score)) %>%
@@ -423,7 +423,7 @@ function(input, output, session) {
    labs              = c("air","vote","income","cost","income/cost","crime rate","pop den")    ####### room for improvement
    
    # quantile data
-   qt = lapply(mydf, quantile, name=FALSE, na.rm=TRUE)
+   qt = lapply(mydf_norm, quantile, name=FALSE, na.rm=TRUE)
    dd = as.data.frame(matrix(unlist(qt), nrow=length(unlist(qt[1]))))
    
    scores_qt        = as.data.frame(t(dd[2:4,]))
@@ -479,7 +479,7 @@ function(input, output, session) {
  # -----------------------------------------------------------------------------
  
  dataset <- reactive({
-   dummy
+   mydf
  })
  
  numericColumns <- reactive({

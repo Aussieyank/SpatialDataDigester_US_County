@@ -19,7 +19,7 @@ library(scales)
 library(data.table)
 library(formattable)
 library(googleVis)
-# library(crosstalk)
+# library(crosstalk)      # very promising development
 library(maps)
 library(radarchart)
 library(geosphere)
@@ -30,43 +30,36 @@ library(htmltools)
 library(ggplot2)
 
 source("./helpers.R")
-source("./sortable.R", local = TRUE)
-source("./corTest.R", local = TRUE)
+source("./corr/sortable.R")
+source("./corr/corTest.R")
 
 scalar = 100
 
 options(digits=4)
 
-fips_fix_dig <- function(vec,wid){
-  # format county identifier FIPS to a given number of digits (adding "0" in front when needed)
-  formatC(vec, width = wid, format = "d", flag = "0")
-}
+# ======== if each csv file is 100% ready to join, do this ==========
+# filenames <- list.files("./data", pattern="*.csv", full.names=TRUE)
+# ldf <- lapply(filenames, read.csv)
+# res <- lapply(ldf, summary)
+# names(res) <- substr(filenames, 8, 30)
+# ===================================================================
 
-readcsv_fips_value <- function(filename, fipscol, valcol, valcolname,...){
-  dat <- fread(filename, stringsAsFactors = FALSE,...)
-  dat = as.data.frame(dat)
-  dat <- dat[,c(fipscol,valcol)]
-  dat[,1] <- fips_fix_dig(dat[,1],5)
-  names(dat)[-1] = valcolname
-  names(dat) <- tolower(names(dat))
-  names(dat)[1] = "GEOID"
-  return(dat)
-}
+# =============================================== 2016 election data ===================================================
+votedat = readcsv_fips_value("./data/2016_US_County_Level_Presidential_Results.csv",11,c(5,6),c("per_dem","per_gop"))
 
-votedat = readcsv_fips_value("./data/2016_US_County_Level_Presidential_Results.csv",
-                             11,c(5,6),c("per_dem","per_gop"))
 votedat$perdiff = votedat$per_dem - votedat$per_gop
 
-colnames3_40_45 = c("Civilian_labor_force_2015", "Employed_2015", "Unemployed_2015",
-                    "Unemployment_rate_2015", "Median_Household_Income_2015", "Med_HH_Income_Percent_of_State_Total_2015","county_state")
 
-incdat = readcsv_fips_value("./data/Unemployment_Med_HH_Inc.csv",
-                            1,c(40:45,3),colnames3_40_45,skip=7)
+# =============================================== 2015 labor and income data ===========================================
+colnames3_40_45 = c("Civilian_labor_force_2015", "Employed_2015", "Unemployed_2015",
+                    "Unemployment_rate_2015", "Median_Household_Income_2015", "Med_HH_Income_Percent_of_State_Total_2015",
+                    "county_state")
+
+incdat = readcsv_fips_value("./data/Unemployment_Med_HH_Inc.csv", 1,c(40:45,3),colnames3_40_45,skip=7)
 
 incdat$median_household_income_2015 = as.numeric(gsub("[$,]", "", incdat$median_household_income_2015))
 
-
-# ====================
+# ============================================ 2015 living wage study by MIT ===========================================
 # living wage data -- 3 main cases:  2 adults 2 kids,  1 adult 1 kid, 1 adult
 
 # had to change to UTF 8 encoding
@@ -86,11 +79,7 @@ incdat$median_household_income_2015 = as.numeric(gsub("[$,]", "", incdat$median_
 # [13] "X2.Adults.3.Children"              
 # [14] "FIPS.Code"                         
 # [15] "Location"                          
-# [16] "year"    
-
-
-# ---------
-# readcsv_fips_value <- function(filename, fipscol, valcol, valcolname,...)
+# [16] "year"  
 livingwagedat = readcsv_fips_value("./data/2015_Living_Wage.csv", 14, c(12,3,2),c("twoatwoc","oneaonec","onea"))
 
 livingwagedat$twoatwoc = as.numeric(gsub("[$,]", "", livingwagedat$twoatwoc))
@@ -98,7 +87,8 @@ livingwagedat$oneaonec = as.numeric(gsub("[$,]", "", livingwagedat$oneaonec))
 livingwagedat$onea     = as.numeric(gsub("[$,]", "", livingwagedat$onea))
 
 livingwagedat[,2:4] = livingwagedat[,2:4]*40*52 # convert hourly wage to annual salary
-# ====================
+
+# ========================================================= Crime data ======================================================
 
 
 # crimedat = read.csv("./data/crime_data_w_population_and_crime_rate.csv")
@@ -114,6 +104,9 @@ crimedat$GEOID = paste0(fips_fix_dig(as.integer(crimedat$GEOID),2), fips_fix_dig
 crimedat$fips_last3 = NULL
 
 
+# =============================================== county polygon area data ===================================================
+
+
 # > area = read.csv('./data/US_Counties.csv')
 # > names(area)
 # [1] "X_feature_id"        "X_feature_id_string" "the_geom"            "geo_id"              "state"               "county"              "name"                "lsad"               
@@ -123,6 +116,17 @@ crimedat$fips_last3 = NULL
 areadat = readcsv_fips_value("./data/US_Counties.csv", 4, 9,"censusarea")
 areadat$GEOID = gsub("0500000US", "", areadat$GEOID)
 
+
+# ============================================ real estate value data from zillow =============================================
+
+# very nice data set, but not used in this 2-week project because# this data set only has 1181 rows -- zillow does not have 
+# statistics for ALL counties (>3000 of them). Same with other real estate online agencies.
+
+# all my other data sets are for at least 3100 counties; for the weighted-average scoring engine, 1 data category missing value
+# for nearly half of the counties while other categories provide nearly full overage usually means 1) sacrifising data to create
+# proper comparison, or 2) come up with good interpolation schemes to fill data holes (interp is rarely just a math problem).
+
+# I made a decision to load this data for correlation analysis, but not for the map
 
 
 # loading County_MedianValuePerSqft_AllHomes.csv from zillow.com
@@ -158,30 +162,15 @@ areadat$GEOID = gsub("0500000US", "", areadat$GEOID)
 # [244] "X2015.12"          "X2016.01"          "X2016.02"          "X2016.03"          "X2016.04"          "X2016.05"          "X2016.06"          "X2016.07"          "X2016.08"         
 # [253] "X2016.09"          "X2016.10"          "X2016.11"          "X2016.12"          "X2017.01"          "X2017.02"      
 
-
-
 zillowdat = readcsv_fips_value("./data/County_MedianValuePerSqft_AllHomes.csv", 5, c(6,234,246,258),c("fips_last3","medv201502","medv201602","medv201702"))
 
 zillowdat$GEOID = paste0(fips_fix_dig(as.integer(zillowdat$GEOID),2), fips_fix_dig(zillowdat$fips_last3,3))
 
 zillowdat$fips_last3 = NULL
 
-# this data set only has 1181 rows -- zillow does not have statistics for ALL counties (>3000 of them). Same with other real estate online agencies.
 
+# ============================================ air quality data =============================================
 
-
-
-
-
-# ttt1 = fips_fix_dig(crimedat$GEOID,2)
-# ttt2 = fips_fix_dig(crimedat$fips_last3,3)
-
-# ===================================================================
-# filenames <- list.files("./data", pattern="*.csv", full.names=TRUE)
-# ldf <- lapply(filenames, read.csv)
-# res <- lapply(ldf, summary)
-# names(res) <- substr(filenames, 8, 30)
-# ===================================================================
 
 # url = "https://data.cdc.gov/api/views/cjae-szjv/rows.csv?accessType=DOWNLOAD"
 # dat <- read.csv(url, stringsAsFactors = FALSE)
@@ -190,26 +179,10 @@ zillowdat$fips_last3 = NULL
 dat <- fread("./data/Air_Quality_Measures_on_the_National_Environmental_Health_Tracking_Network.csv", stringsAsFactors = FALSE)
 names(dat) <- tolower(names(dat))
 
-# dat$countyname <- tolower(dat$countyname)
-
-# -- debug --
-# names(dat)
-# count(dat,countyname)
-
-# measure_per_year <- dat %>%
-#   group_by(measureid,reportyear) %>%
-#   summarise(n())
 
 id_name <- dat %>%
   select(measureid,measurename,unit, unitname) %>%
   unique()
-
-
-# Wide data set, subset only what we need.
-
-# county_dat <- subset(dat, measureid == "296",
-#                      select = c("reportyear","countyfips","statename", "countyname", "value", "unitname")) %>%
-#   subset(reportyear==2011, select = c("countyfips", "value"))
 
 airdat <- dat %>%
   filter(measureid == "296" & reportyear == 2011) %>%
@@ -221,19 +194,26 @@ colnames(airdat) <- c("GEOID", "airqlty")
 # airdat$GEOID <- formatC(airdat$GEOID, width = 5, format = "d", flag = "0")
 airdat$GEOID <- fips_fix_dig(airdat$GEOID,5)
 
+
+
+# ============================ special step because of county name and FIPS change ===========================
+
 #  In 2015, Shannon County, SD (FIPS code 46113) is now Oglala Lakota County (FIPS code 46102)
 airdat$GEOID        <- gsub("46113", "46102", airdat$GEOID)
 votedat$GEOID       <- gsub("46113", "46102", votedat$GEOID)
 livingwagedat$GEOID <- gsub("46113", "46102", livingwagedat$GEOID)
 crimedat$GEOID      <- gsub("46113", "46102", crimedat$GEOID)
+areadat$GEOID       <- gsub("46113", "46102", areadat$GEOID)
 
+# ========================= 1 NA in crime data that I googled to get some estimated numbers ===================
+
+# there are about 150 counties with 0 crime rate (per 100k people), it would be nice to have time to investigate...
 dona_ana <- data.frame(GEOID="35013",crime_rate_per_100k=210, population=214000)
 crimedat = rbind(crimedat, dona_ana)   # filling data for FIPS = 35013,  Dona Ana County, NM
 
-areadat$GEOID      <- gsub("46113", "46102", areadat$GEOID)
 
 
-# ==== merge on GEOID =======
+# ============================= merge on GEOID / FIPS ====================================
 county_dat <- full_join(airdat, votedat, by=c("GEOID"))
 county_dat <- full_join(county_dat, incdat, by=c("GEOID"))
 county_dat <- full_join(county_dat, livingwagedat, by=c("GEOID"))
@@ -241,35 +221,15 @@ county_dat <- full_join(county_dat, livingwagedat, by=c("GEOID"))
 county_dat$r_inc_cos = county_dat$median_household_income_2015 / county_dat$twoatwoc
 
 county_dat <- full_join(county_dat, crimedat, by=c("GEOID"))
-
 county_dat <- full_join(county_dat, areadat, by=c("GEOID"))
 
 county_dat$pop_den_log = log(county_dat$population / county_dat$censusarea)
 # county_dat$pop_den_log = county_dat$population / county_dat$censusarea
 
-
-
 county_dat <- full_join(county_dat, zillowdat, by=c("GEOID"))
 
 
-# ===========================
 
-
-
-# derivative data
-
-
-
-
-
-
-
-# Rename columns to make for a clean df merge later.
-# colnames(county_dat) <- c("GEOID", "airqlty", "gopvote")
-
-
-# here generate a normalized version of county_dat, where each numeric column is shifted then normalized to a range of [0,1]
-# this is done by  normed =  ( original_col - min_of_this_col ) / original_range_of_this_col
 
 
 
@@ -281,18 +241,21 @@ nums <- sapply(county_dat, is.numeric)
 # testing if this is needed for slider range comparison to work for extreme cases
 county_dat[,nums] = round(county_dat[,nums],2)
 
+# here we generate a normalized version of county_dat, where each numeric column is shifted then normalized to a range of [0,scalar]
+# this is done by  normed =  ( original_col - min_of_this_col ) / original_range_of_this_col  * scalar
 
 to_be_normalized = county_dat[,nums]
 normalized = as.data.frame(lapply(to_be_normalized, normalize, na.rm=TRUE))
 
 county_dat_norm = county_dat
 county_dat_norm[,nums] = normalized * scalar     # change to [0,scalar]
-# ====================== next step is to set the "good" direction for some measurement ==================
 
-# for example, income and air quality data has both been mapped to [0,1] range, 
-# yet 1 means good for income, but bad for air quality.
+# ====================== next step is to set the default "good" direction for some measurement ==================
 
-# since these values will be used to generated a average "score" for each location, we want to have consistant "good" direction
+# for example, income and air quality data has both been mapped to [0,scalar] range, 
+# yet a greater number is good for income, but bad for air quality.
+
+# since these values will be used to generated an average "score" for each location, we want to align the "good" directions
 
 # question still remains for subjective data like political vote results
 
@@ -304,12 +267,19 @@ county_dat_norm["onea"]                   = scalar - county_dat_norm["onea"]
 
 county_dat_norm$crime_rate_per_100k       = scalar - county_dat_norm$crime_rate_per_100k
 
+
+# =========================================== I enjoyed learning from datascienceriot.com ==================================
+# the key data cleaning steps are learned from here https://www.datascienceriot.com/mapping-us-counties-in-r-with-fips/kris/
+
 # Download county shape file from Tiger.
 # https://www.census.gov/geo/maps-data/data/cbf/cbf_counties.html
 
-
+# ================================================= #
+# every several years, there will be some changes in the county definition. 
+# I have learned that for a county level map generation it is better to first look at when the majority of data are collected
+# then start from a most relavent county shape set.
+#
 # us.map <- readOGR(dsn = "./shape", layer = "cb_2013_us_county_20m", stringsAsFactors = FALSE)
-
 # us.map <- readOGR(dsn = "./shape", layer = "cb_2016_us_county_500k", stringsAsFactors = FALSE)
 
 us.map <- readOGR(dsn = "./shape", layer = "cb_2016_us_county_20m", stringsAsFactors = FALSE)
@@ -323,8 +293,16 @@ us.map <- us.map[!us.map$STATEFP %in% c("02", "15", "72", "66", "78", "60", "69"
 us.map <- us.map[!us.map$STATEFP %in% c("81", "84", "86", "87", "89", "71", "76",
                                         "95", "79"),]
 
-# ===========================================
+# ======================== lat lon data for each county ============================ 
 # lat lon for each county
+# I was assuming after finding so many county level csv file, lat lon data is in hand, but no :)
+#
+# It turns out that with the rgeos package, I can get this info from the shape files
+# which is loaded as a SpatialPolygonDataFrame
+#
+# To learn more about how to deal with this structure, I find a good webpage
+# http://zevross.com/blog/2015/10/14/manipulating-and-mapping-us-census-data-in-r-using-the-acs-tigris-and-leaflet-packages-3/
+#
 centroid = rgeos::gCentroid(us.map, byid=TRUE)
 
 GEOID = us.map$GEOID
@@ -335,43 +313,42 @@ GEOID_lat_lon = data.frame(GEOID, lat, lon)
 
 county_dat = dplyr::left_join(county_dat, GEOID_lat_lon, by=c("GEOID"))
 
-# us.map <- merge(us.map, centroid)
+# ==========================================================================================
 
-# ===========================================
+# this is a turning point. after the merge, the returned data is in SpatialPolygonsDataFrame
+
+# > class(leafmap)
+# [1] "SpatialPolygonsDataFrame"
+# attr(,"package")
+# [1] "sp"
+
+# It is not easy to manipulate. In this project I chose to use this leafmap data for geometry
+# while keep data frames like county_dat in memory for filtering and other calculation
+# Your suggestion to better deal with this situation is very welcome.
 
 # Merge spatial df with downloade ddata.
 leafmap <- merge(us.map, county_dat, by=c("GEOID"))
 
 leafmap_norm <- merge(us.map, county_dat_norm, by=c("GEOID"))
 
+# ==========================================================================================
 
 
 
 
-
-
-
-
-
-dummy = as.data.frame(leafmap)
-
+mydf      = as.data.frame(leafmap)
 dummy_norm = as.data.frame(leafmap_norm)
-# dummy <- dummy %>% arrange(desc(median_household_income_2015))
 
 neededcols = c(10, 13, 18, 21, 24, 25, 28)
 # neededcols = c("airqlty", "perdiff", "median_household_income_2015", "twoatwoc", "r_inc_cos","crime_rate_per_100k")
 
 
 
-colnames = names(dummy)[neededcols]
-mydf = dummy_norm %>%
-  select(neededcols)
+colnames = names(mydf)[neededcols]
 
+mydf_norm     = dummy_norm %>% select(neededcols)   # this is the main set used in the weighted_val() calculation
 
-
-
-dummy2 = dummy %>%
-  select(neededcols)
+dummy2   = mydf %>% select(neededcols)
 
 # find min max for all needed cols
 MINs = apply(dummy2,2,min)  
@@ -383,12 +360,9 @@ MAXs <- formattable(MAXs, digits = 2, format = "f")
 # MINs <- round(MINs,2)
 # MAXs <- round(MAXs,2)
 
-mydf_ct = mydf
+lon_lat_county_mat=cbind(mydf$lon, mydf$lat)
 
-
-lon_lat_county_mat=cbind(dummy$lon, dummy$lat)
-
-
+names(mydf)[c(17,18,19)] = c('unemployR2015','mdhhinc2015','medhhinc_perc_sta2015')
 # ======================================================================
 # ======================================================================
 # ==================                               =====================
@@ -397,12 +371,11 @@ lon_lat_county_mat=cbind(dummy$lon, dummy$lat)
 # ======================================================================
 # ======================================================================
 
+# chart.Correlation(mydf[,c(10, 11, 12, 13, 17, 18, 21, 24, 25, 26, 27, 28, 29,30)])
+# chart.Correlation(dummy_norm[,c(10, 11,12, 13, 17, 18, 21, 24, 25, 26, 27, 28)])
 
-# distm (lon_lat_county_mat, rbind(c(-80, 40)), fun = distHaversine)
 
-
-
-# names(dummy)
+# names(mydf)
 # [1] "GEOID"                                     "STATEFP"                                  
 # [3] "COUNTYFP"                                  "COUNTYNS"                                 
 # [5] "AFFGEOID"                                  "NAME"                                     
@@ -418,10 +391,6 @@ lon_lat_county_mat=cbind(dummy$lon, dummy$lat)
 # [25] "crime_rate_per_100k"                       "population"                               
 # [27] "censusarea"                                "pop_den_log"                              
 # [29] "lat"                                       "lon"   
-
-
-# chart.Correlation(dummy[,c(10, 11, 12, 13, 17, 18, 21, 24, 25, 26, 27, 28, 29,30)])
-# chart.Correlation(dummy_norm[,c(10, 11,12, 13, 17, 18, 21, 24, 25, 26, 27, 28)])
 
 
 # names(dummy_norm)
