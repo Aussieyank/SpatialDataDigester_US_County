@@ -1,10 +1,11 @@
 # Correlation Analysis Insights
 
-blabla
 
-walawalawala
-```
-blabla
+Variable Full Names
 ```
 
-Hey _blablabla_ by NAME (blabla, 2012). dfadfas dd _[link attached](http://www.google.com/)_. 
+```
+
+Place Holder -- Correlation Insights
+
+will come back and fill out after blog post

@@ -1,13 +1,36 @@
 # Geospatial Data Digester -- US County
 
-See a version of it live at https://chaoshi.shinyapps.io/SpatialDataDigester_US_County/
+Shiny project @ NYC Data Science Academy
 
-You can run this demo with:
+Chao Shi
+chao.shi.datasci at gmail dot com
+4/23/2017
+
+
+You will need the devtools package to download a few needed packages, in order to runs Shiny app
+
 ```
-if (!require(devtools))
-  install.packages("devtools")
+install.packages("devtools")
 devtools::install_github("rstudio/leaflet")
-shiny::runGitHub("   ", subdir="")
+devtools::install_github("MangoTheCat/radarchart")
+
 ```
 
-Data compiled for _blablabla_ by NAME (blabla, 2012). The app interface and interactive design were inspired by superzip, the Washington Post's interactive feature _[Washington: A world apart](http://www.washingtonpost.com/sf/local/2013/11/09/washington-a-world-apart/)_. 
+I will revist this page after a blog post about this, but very briefly for now
+
+- inspired by the superzip Shiny example by Joe Cheng
+- county level data cleaning example from datascienceriot.com
+- radar chart package developers
+- shinyCorrplot by saurfang
+
+
+Data source
+
+2013 air quality measurement
+2016 Election county level results
+2015 labor survey
+2015 living cost study by MIT
+2015 Crime Rate data
+2016 county geometry shape files
+real estate data from zillow.com
+
